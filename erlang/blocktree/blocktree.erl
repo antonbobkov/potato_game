@@ -32,7 +32,7 @@ add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transactio
     end,
 
     {NewTA, Msg} = add_new_transaction_to_array(TransactionArray, Transaction),
-    NewTM = maps:put(Id, NewTA),
+    NewTM = maps:put(Id, NewTA, TransactionMap),
     {NewTM, Msg, Msg2}.
     
 add_new_transaction(VerifierData, Transaction) ->
