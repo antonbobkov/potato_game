@@ -5,7 +5,7 @@
 
 add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transaction) ->
     TA = TransactionArray,
-    ArrSz = array:size(TransactionArray),
+    ArrSz = array:size(TA),
     if
 	Nonce > ArrSz ->
 	    {TA, ignore_nonce_too_high};
@@ -18,11 +18,13 @@ add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transac
 		    {TA, error_same_nonce_different_transaction}
 	    end;
 	Nonce == ArrSz ->
-	    {array:set(Nonce, Transaction, TA), added}
+	    NewTA = array:set(Nonce, Transaction, TA),
+	    {NewTA, added}
     end.
 	    
 add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transaction) ->
-    Result = maps:find(Id, TransactionMap),
+    TM = TransactionMap,
+    Result = maps:find(Id, TM),
     case Result of
 	{ok, TransactionArray} ->
 	    Msg2 = existing_player;
@@ -32,13 +34,15 @@ add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transactio
     end,
 
     {NewTA, Msg} = add_new_transaction_to_array(TransactionArray, Transaction),
-    NewTM = maps:put(Id, NewTA, TransactionMap),
+    NewTM = maps:put(Id, NewTA, TM),
     {NewTM, Msg, Msg2}.
     
 add_new_transaction(VerifierData, Transaction) ->
-    {B, TransactionMap} = VerifierData,
+    VD = VerifierData,
+    {B, TransactionMap} = VD,
     {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
-    {{B, NewTM}, Msg1, Msg2}.
+    NewVD = {B, NewTM},
+    {NewVD, Msg1, Msg2}.
     
 
 	    
