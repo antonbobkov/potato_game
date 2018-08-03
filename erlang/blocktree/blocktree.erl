@@ -10,7 +10,7 @@ add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transac
 	Nonce > ArrSz ->
 	    {TA, ignore_nonce_too_high};
 	Nonce < ArrSz ->
-	    RecordedTransaction = array:get(nonce),
+	    RecordedTransaction = array:get(Nonce, TA),
 	    if 
 		RecordedTransaction == Transaction ->
 		    {TA, ignore_duplicate};
