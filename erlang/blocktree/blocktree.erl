@@ -25,6 +25,7 @@ add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transac
 add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transaction) ->
     TM = TransactionMap,
     Result = maps:find(Id, TM),
+
     case Result of
 	{ok, TransactionArray} ->
 	    Msg2 = existing_player;
@@ -40,7 +41,9 @@ add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transactio
 add_new_transaction(VerifierData, Transaction) ->
     VD = VerifierData,
     {B, TransactionMap} = VD,
+
     {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
+
     NewVD = {B, NewTM},
     {NewVD, Msg1, Msg2}.
     
