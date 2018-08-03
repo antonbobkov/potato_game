@@ -36,8 +36,10 @@ add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transactio
     {NewTM, Msg, Msg2}.
     
 add_new_transaction(VerifierData, Transaction) ->
-    {_, TransactionMap} = VerifierData,
-    add_new_transaction_to_map(TransactionMap, Transaction).
+    {B, TransactionMap} = VerifierData,
+    {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
+    {{B, NewTM}, Msg1, Msg2}.
+    
 
 	    
     
