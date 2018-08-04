@@ -2,10 +2,15 @@
 -export([add_new_transaction/2]).
 
 -record(transaction, {game_data, nonce, player_id, consensus_data}).
+-record(verifier_data, {block_map, transaction_map}).
 
-add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transaction) ->
+add_new_transaction_to_array(TransactionArray, Transaction)
+  when is_record(Transaction, transaction) ->
+
+    #transaction{nonce=Nonce}=Transaction,
     TA = TransactionArray,
     ArrSz = array:size(TA),
+
     if
 	Nonce > ArrSz ->
 	    {TA, ignore_nonce_too_high};
@@ -22,7 +27,10 @@ add_new_transaction_to_array(TransactionArray, #transaction{nonce=Nonce}=Transac
 	    {NewTA, added}
     end.
 	    
-add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transaction) ->
+add_new_transaction_to_map(TransactionMap, Transaction)
+  when is_record(Transaction, transaction) ->
+
+    #transaction{player_id=Id}=Transaction,
     TM = TransactionMap,
     Result = maps:find(Id, TM),
 
@@ -38,13 +46,16 @@ add_new_transaction_to_map(TransactionMap, #transaction{player_id=Id}=Transactio
     NewTM = maps:put(Id, NewTA, TM),
     {NewTM, Msg, Msg2}.
     
-add_new_transaction(VerifierData, Transaction) ->
-    VD = VerifierData,
-    {B, TransactionMap} = VD,
+add_new_transaction(VerifierData, Transaction) 
+  when is_record(VerifierData, verifier_data),
+       is_record(Transaction, transaction) ->
+
+    #verifier_data{transaction_map=TransactionMap} = VerifierData,
 
     {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
 
-    NewVD = {B, NewTM},
+    NewVD = VerifierData#verifier_data{transaction_map=NewTM},
+
     {NewVD, Msg1, Msg2}.
     
 
