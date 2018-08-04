@@ -7,7 +7,7 @@
 add_new_transaction_to_array(TransactionArray, Transaction)
   when is_record(Transaction, transaction) ->
 
-    #transaction{nonce=Nonce}=Transaction,
+    Nonce = Transaction#transaction.nonce,
     TA = TransactionArray,
     ArrSz = array:size(TA),
 
@@ -30,7 +30,7 @@ add_new_transaction_to_array(TransactionArray, Transaction)
 add_new_transaction_to_map(TransactionMap, Transaction)
   when is_record(Transaction, transaction) ->
 
-    #transaction{player_id=Id}=Transaction,
+    Id=Transaction#transaction.player_id,
     TM = TransactionMap,
     Result = maps:find(Id, TM),
 
@@ -50,7 +50,7 @@ add_new_transaction(VerifierData, Transaction)
   when is_record(VerifierData, verifier_data),
        is_record(Transaction, transaction) ->
 
-    #verifier_data{transaction_map=TransactionMap} = VerifierData,
+    TransactionMap = VerifierData#verifier_data.transaction_map,
 
     {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
 
