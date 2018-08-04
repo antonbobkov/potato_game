@@ -4,7 +4,6 @@
 -record(transaction, {game_data, nonce, player_id, consensus_data}).
 -record(verifier_data, {block_map, transaction_map}).
 
-
 add_new_transaction_to_array(TransactionArray, Transaction)
   when is_record(Transaction, transaction) ->
 
