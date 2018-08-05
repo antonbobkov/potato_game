@@ -50,11 +50,11 @@ add_new_transaction(Transaction, VerifierData)
 
     TransactionMap = VerifierData#verifier_data.transaction_map,
 
-    {NewTM, Msg} = add_new_transaction_to_map(Transaction, TransactionMap),
+    {Msg, NewTM} = add_new_transaction_to_map(Transaction, TransactionMap),
 
     NewVD = VerifierData#verifier_data{transaction_map=NewTM},
 
-    {NewVD, Msg}.
+    {Msg, NewVD}.
     
 
 	    
