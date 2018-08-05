@@ -1,10 +1,9 @@
 -module(blocktree).
 -export([add_new_transaction/2]).
 
--record(transaction, {game_data, nonce, player_id, consensus_data}).
--record(verifier_data, {block_map, transaction_map}).
+-include("blocktree.hrl").
 
-add_new_transaction_to_array(TransactionArray, Transaction)
+add_new_transaction_to_array(Transaction, TransactionArray)
   when is_record(Transaction, transaction) ->
 
     Nonce = Transaction#transaction.nonce,
@@ -13,21 +12,21 @@ add_new_transaction_to_array(TransactionArray, Transaction)
 
     if
 	Nonce > ArrSz ->
-	    {TA, ignore_nonce_too_high};
+	    {ignore_nonce_too_high, TA};
 	Nonce < ArrSz ->
 	    RecordedTransaction = array:get(Nonce, TA),
 	    if 
 		RecordedTransaction == Transaction ->
-		    {TA, ignore_duplicate};
+		    {ignore_duplicate, TA};
 		RecordedTransaction /= Transaction ->
-		    {TA, error_same_nonce_different_transaction}
+		    error("same_nonce_different_transaction")
 	    end;
 	Nonce == ArrSz ->
 	    NewTA = array:set(Nonce, Transaction, TA),
-	    {NewTA, added}
+	    {added, NewTA}
     end.
 	    
-add_new_transaction_to_map(TransactionMap, Transaction)
+add_new_transaction_to_map(Transaction, TransactionMap)
   when is_record(Transaction, transaction) ->
 
     Id=Transaction#transaction.player_id,
@@ -36,27 +35,26 @@ add_new_transaction_to_map(TransactionMap, Transaction)
 
     case Result of
 	{ok, TransactionArray} ->
-	    Msg2 = existing_player;
+	    pass;
 	error ->
-	    TransactionArray = array:new(),
-	    Msg2 = new_player
+	    TransactionArray = array:new()
     end,
 
-    {NewTA, Msg} = add_new_transaction_to_array(TransactionArray, Transaction),
+    {Msg, NewTA} = add_new_transaction_to_array(Transaction, TransactionArray),
     NewTM = maps:put(Id, NewTA, TM),
-    {NewTM, Msg, Msg2}.
+    {Msg, NewTM}.
     
-add_new_transaction(VerifierData, Transaction) 
-  when is_record(VerifierData, verifier_data),
-       is_record(Transaction, transaction) ->
+add_new_transaction(Transaction, VerifierData) 
+  when is_record(Transaction, transaction),
+       is_record(VerifierData, verifier_data) ->
 
     TransactionMap = VerifierData#verifier_data.transaction_map,
 
-    {NewTM, Msg1, Msg2} = add_new_transaction_to_map(TransactionMap, Transaction),
+    {NewTM, Msg} = add_new_transaction_to_map(Transaction, TransactionMap),
 
     NewVD = VerifierData#verifier_data{transaction_map=NewTM},
 
-    {NewVD, Msg1, Msg2}.
+    {NewVD, Msg}.
     
 
 	    
