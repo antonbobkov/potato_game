@@ -1,0 +1,42 @@
+File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree/blocktree_tests.erl by COVER 2018-08-05 at 23:01:04
+
+****************************************************************************
+
+        |  -module(blocktree_tests).
+        |  -export([cmd/0]).
+        |  
+        |  -include("blocktree.hrl").
+        |  
+        |  get_next_nonce(Id, VD) ->
+     6..|      Map = VD#verifier_data.transaction_map,
+     6..|      Result = maps:find(Id, Map),
+     6..|      case Result of
+        |  	{ok, TransactionArray} ->
+     4..|  	    array:size(TransactionArray);
+        |  	error ->
+     2..|  	    0
+        |      end.
+        |      
+        |  add_transaction(next, Id, VD) ->
+     0..|      NextNonce = get_next_nonce(Id, VD),
+     0..|      add_transaction(NextNonce, Id, VD); 
+        |  add_transaction(Nonce, Id, VD) ->
+     6..|      T = #transaction{nonce=Nonce, player_id=Id},
+     6..|      blocktree:add_new_transaction(T, VD).
+        |  
+        |  add_mult_trans({Count, _}, VD) when Count == 0 ->
+     3..|      VD;
+        |  add_mult_trans({Count, Id}, VD) when Count > 0 ->
+     6..|      NextNonce = get_next_nonce(Id, VD),
+     6..|      {Msg, NewVD} = add_transaction(NextNonce, Id, VD),
+     6..|      io:format("~p ~p ~p ~n", [Id, NextNonce, Msg]),
+     6..|      add_mult_trans({Count-1, Id}, NewVD).
+        |  
+        |  cmd() ->
+     1..|      VD = #verifier_data{transaction_map=maps:new()},
+        |      %% add_transaction(0, p1, VD).
+        |      %% add_mult_trans(10, p1, VD).
+     1..|      L = [{2, p1}, {3, p2}, {1, p1}],
+     1..|      lists:foldl(fun add_mult_trans/2, VD, L).
+        |      
+        |  

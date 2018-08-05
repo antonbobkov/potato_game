@@ -28,14 +28,26 @@ add_mult_trans({Count, Id}, VD) when Count > 0 ->
     io:format("~p ~p ~p ~n", [Id, NextNonce, Msg]),
     add_mult_trans({Count-1, Id}, NewVD).
 
-   
-    
-
 cmd() ->
     VD = #verifier_data{transaction_map=maps:new()},
-    %% add_transaction(0, p1, VD).
-    %% add_mult_trans(10, p1, VD).
-    L = [{10, p1}, {10, p2}],
-    lists:foldl(fun add_mult_trans/2, VD, L).
+
+    {ignore_nonce_too_high, _} = add_transaction(1, p1, VD),
+
+    L = [{2, p1}, {3, p2}, {1, p1}],
+    VD1 = lists:foldl(fun add_mult_trans/2, VD, L),
+    io:format("~p ~n", [VD1]),
+
+    {ignore_duplicate, _} = add_transaction(1, p1, VD1),
+
+    T = #transaction{nonce=1, player_id=p1, game_data=stuff},
+    try blocktree:add_new_transaction(T, VD1) of
+	_ -> throw("error expected, none happened")
+    catch 
+	throw:X -> io:format("throw ~p ~n", [X]);
+	error:X -> io:format("error ~p ~n", [X]);	
+	exit:X -> io:format("exit ~p ~n", [X])
+    end,
+
+    ok.
     
 

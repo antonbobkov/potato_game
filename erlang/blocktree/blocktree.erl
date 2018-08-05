@@ -19,7 +19,7 @@ add_new_transaction_to_array(Transaction, TransactionArray)
 		RecordedTransaction == Transaction ->
 		    {ignore_duplicate, TA};
 		RecordedTransaction /= Transaction ->
-		    error("same_nonce_different_transaction")
+		    throw("same_nonce_different_transaction")
 	    end;
 	Nonce == ArrSz ->
 	    NewTA = array:set(Nonce, Transaction, TA),

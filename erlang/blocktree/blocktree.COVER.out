@@ -1,0 +1,65 @@
+File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree/blocktree.erl by COVER 2018-08-05 at 23:26:42
+
+****************************************************************************
+
+        |  -module(blocktree).
+        |  -export([add_new_transaction/2]).
+        |  
+        |  -include("blocktree.hrl").
+        |  
+        |  add_new_transaction_to_array(Transaction, TransactionArray)
+        |    when is_record(Transaction, transaction) ->
+        |  
+     9..|      Nonce = Transaction#transaction.nonce,
+     9..|      TA = TransactionArray,
+     9..|      ArrSz = array:size(TA),
+        |  
+     9..|      if
+        |  	Nonce > ArrSz ->
+     1..|  	    {ignore_nonce_too_high, TA};
+        |  	Nonce < ArrSz ->
+     2..|  	    RecordedTransaction = array:get(Nonce, TA),
+     2..|  	    if 
+        |  		RecordedTransaction == Transaction ->
+     1..|  		    {ignore_duplicate, TA};
+        |  		RecordedTransaction /= Transaction ->
+     1..|  		    throw("same_nonce_different_transaction")
+        |  	    end;
+        |  	Nonce == ArrSz ->
+     6..|  	    NewTA = array:set(Nonce, Transaction, TA),
+     6..|  	    {added, NewTA}
+        |      end.
+        |  	    
+        |  add_new_transaction_to_map(Transaction, TransactionMap)
+        |    when is_record(Transaction, transaction) ->
+        |  
+     9..|      Id=Transaction#transaction.player_id,
+     9..|      TM = TransactionMap,
+     9..|      Result = maps:find(Id, TM),
+        |  
+     9..|      case Result of
+        |  	{ok, TransactionArray} ->
+     6..|  	    pass;
+        |  	error ->
+     3..|  	    TransactionArray = array:new()
+        |      end,
+        |  
+     9..|      {Msg, NewTA} = add_new_transaction_to_array(Transaction, TransactionArray),
+     8..|      NewTM = maps:put(Id, NewTA, TM),
+     8..|      {Msg, NewTM}.
+        |      
+        |  add_new_transaction(Transaction, VerifierData) 
+        |    when is_record(Transaction, transaction),
+        |         is_record(VerifierData, verifier_data) ->
+        |  
+     9..|      TransactionMap = VerifierData#verifier_data.transaction_map,
+        |  
+     9..|      {Msg, NewTM} = add_new_transaction_to_map(Transaction, TransactionMap),
+        |  
+     8..|      NewVD = VerifierData#verifier_data{transaction_map=NewTM},
+        |  
+     8..|      {Msg, NewVD}.
+        |      
+        |  
+        |  	    
+        |      
