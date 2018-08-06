@@ -111,32 +111,48 @@ search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
 	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
     end.
 
-check_that_player_ids_are_correct(id, IdCheck, IdCorrect) when IdCheck == IdCorrect ->
-    ok;
-check_that_player_ids_are_correct(id, IdCheck, IdCorrect) when IdCheck /= IdCorrect -> 
-    throw("bad player_id in BlockTransactions");
-check_that_player_ids_are_correct(transaction, Transaction, IdCorrect) -> 
-    IdCheck=Transaction#transaction.player_id,
-    check_that_player_ids_are_correct(id, IdCheck, IdCorrect);
-check_that_player_ids_are_correct(list, TransactionList, IdCorrect) -> 
-    lists:map(fun(T) -> check_that_player_ids_are_correct(transaction, T, IdCorrect) end, TransactionList).
-check_that_player_ids_are_correct(TransactionMap) -> 
-    maps:map(fun(Id, Lst) -> check_that_player_ids_are_correct(list, Lst, Id) end, TransactionMap).
+%% check_that_player_ids_are_correct(id, IdCheck, IdCorrect) when IdCheck == IdCorrect ->
+%%     ok;
+%% check_that_player_ids_are_correct(id, IdCheck, IdCorrect) when IdCheck /= IdCorrect -> 
+%%     throw("bad player_id in BlockTransactions");
+%% check_that_player_ids_are_correct(transaction, Transaction, IdCorrect) -> 
+%%     IdCheck=Transaction#transaction.player_id,
+%%     check_that_player_ids_are_correct(id, IdCheck, IdCorrect);
+%% check_that_player_ids_are_correct(list, TransactionList, IdCorrect) -> 
+%%     lists:map(fun(T) -> check_that_player_ids_are_correct(transaction, T, IdCorrect) end, TransactionList).
+%% check_that_player_ids_are_correct(TransactionMap) -> 
+%%     maps:map(fun(Id, Lst) -> check_that_player_ids_are_correct(list, Lst, Id) end, TransactionMap).
+
+transaction_map_from_list(ListR) ->
+    List = lists:reverse(ListR),
+    lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
+transaction_map_from_list(T, Map) ->
+    Id=T#transaction.player_id,
+    case maps:find(Id, Map) of
+	{ok, OldList} ->
+	    NewList = [T | OldList];
+	error ->
+	    NewList = [T]
+    end,
+    maps:put(Id, NewList, Map).
+    
 
 add_new_block(Block, VerifierData) 
   when is_record(Block, block),
        is_record(VerifierData, verifier_data) ->
 
     #verifier_data{block_map = BlockMap} = VerifierData,
-    #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactions} = Block,
+    #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
 
     ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
 
-    maps:map(fun transaction_list_check_if_in_order/2, BlockTransactions),
+    BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
 
-    check_that_player_ids_are_correct(BlockTransactions),
+    maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
 
-    FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactions),
+    %% check_that_player_ids_are_correct(BlockTransactionsMap),
+
+    FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
 
     MapEmpty = maps:size(BlockMap) == 0,
     if 
@@ -145,7 +161,7 @@ add_new_block(Block, VerifierData)
 
 	    ?assertEqual(PrevId, undefined, "genesis, bad previous_id"),
 
-	    ZeroNonceMap = maps:map(fun(_, _) -> 0 end, BlockTransactions),
+	    ZeroNonceMap = maps:map(fun(_, _) -> 0 end, BlockTransactionsMap),
 
 	    ?assertEqual(FirstNonceMap,  ZeroNonceMap, "genesis, transactions not starting with zero");
 
@@ -159,7 +175,7 @@ add_new_block(Block, VerifierData)
 	    ?assertEqual(Height, PrevBlock#block.height + 1, "bad height"),
 
 	    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
-	    FirstNonceMapProper = maps:map(MapFn, BlockTransactions),
+	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
 
 	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
     end,
@@ -173,6 +189,6 @@ add_new_block(Block, VerifierData)
     ListFoldFn = fun(T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
     MapFoldFn = fun(_, TransactionList, VD) -> lists:foldl(ListFoldFn, VD, TransactionList) end,
 
-    VD2 = maps:fold(MapFoldFn, VD1, BlockTransactions),
+    VD2 = maps:fold(MapFoldFn, VD1, BlockTransactionsMap),
 
     VD2.
