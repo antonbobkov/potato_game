@@ -33,7 +33,7 @@ add_mult_trans({Count, Id}, VD) when Count > 0 ->
 test_add_new_transaction() ->
     VD = #verifier_data{transaction_map=maps:new()},
 
-    {ignore_nonce_too_high, _} = add_transaction(1, p1, VD),
+    ?assertMatch({ignore_nonce_too_high, _}, add_transaction(1, p1, VD)),
 
     L = [{2, p1}, {3, p2}, {2, p1}],
     VD1 = lists:foldl(fun add_mult_trans/2, VD, L),
@@ -45,16 +45,21 @@ test_add_new_transaction() ->
     ?assert(array:size(maps:get(p1, MP)) == 4),
     ?assert(array:size(maps:get(p2, MP)) == 3),
 
-    {ignore_duplicate, _} = add_transaction(1, p1, VD1),
+    ?assertMatch({ignore_duplicate, _}, add_transaction(1, p1, VD1)),
 
     T = #transaction{nonce=1, player_id=p1, game_data=stuff},
-    try blocktree:add_new_transaction(T, VD1) of
-	_ -> throw("error expected, none happened")
-    catch 
-	throw:X -> io:format("throw ~p ~n", [X]);
-	error:X -> io:format("error ~p ~n", [X]);	
-	exit:X -> io:format("exit ~p ~n", [X])
-    end,
+    ?assertThrow(_, blocktree:add_new_transaction(T, VD1)),
+
+    VD1.
+
+test_add_empty_genesis() ->
+    VD = #verifier_data{transaction_map=maps:new(), block_map=maps:new()},
+    Block = #block{previous_id=undefined, this_id=0, height=0, transactions=maps:new()},
+    VD1 = blocktree:add_new_block(Block, VD),
+
+    BMP = VD1#verifier_data.block_map,
+    ?assert(maps:size(BMP) == 1),
+    ?assert(maps:get(0, BMP) == Block),
 
     VD1.
 
@@ -64,21 +69,24 @@ map_of_arrays_to_map_of_lists(Map) ->
 test_add_tr_genesis() ->
     VD = #verifier_data{transaction_map=maps:new(), block_map=maps:new()},
     L = [{2, p1}, {3, p2}, {2, p1}],
-    VD1 = lists:foldl(fun add_mult_trans/2, VD, L),
+    VDD = lists:foldl(fun add_mult_trans/2, VD, L),
 
     Block = #block{previous_id=undefined, this_id=0, height=0, 
-		   transactions = map_of_arrays_to_map_of_lists(VD1#verifier_data.transaction_map)},
+		   transactions = map_of_arrays_to_map_of_lists(VDD#verifier_data.transaction_map)},
 		   %% transactions = VD1#verifier_data.transaction_map},
-    VD2 = blocktree:add_new_block(Block, VD),
-    %% io:format("~p ~n", [VD1]),
-    VD2.
-
-test_add_empty_genesis() ->
-    VD = #verifier_data{transaction_map=maps:new(), block_map=maps:new()},
-    Block = #block{previous_id=undefined, this_id=0, height=0, transactions=maps:new()},
     VD1 = blocktree:add_new_block(Block, VD),
-    %% io:format("~p ~n", [VD1]),
+
+    MP = VD1#verifier_data.transaction_map,
+    ?assert(maps:size(MP) == 2),
+    ?assert(array:size(maps:get(p1, MP)) == 4),
+    ?assert(array:size(maps:get(p2, MP)) == 3),    
+
+    BMP = VD1#verifier_data.block_map,
+    ?assert(maps:size(BMP) == 1),
+    ?assert(maps:get(0, BMP) == Block),
+
     VD1.
+
 
 cmd() ->
     test_add_new_transaction(),
