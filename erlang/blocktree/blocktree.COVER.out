@@ -1,10 +1,10 @@
-File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree/blocktree.erl by COVER 2018-08-06 at 22:19:08
+File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree/blocktree.erl by COVER 2018-08-06 at 23:28:51
 
 ****************************************************************************
 
         |  -module(blocktree).
         |  
-        |  -export([add_new_transaction/2, add_new_block/2]).
+        |  -export([add_new_transaction/2, add_new_block/2, generate_new_block/2]).
         |  
         |  -include("blocktree.hrl").
         |  -include_lib("stdlib/include/assert.hrl").
@@ -13,55 +13,55 @@ File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree
         |  add_new_transaction_to_array(Transaction, TransactionArray)
         |    when is_record(Transaction, transaction) ->
         |  
-    37..|      Nonce = Transaction#transaction.nonce,
-    37..|      TA = TransactionArray,
-    37..|      ArrSz = array:size(TA),
+    68..|      Nonce = Transaction#transaction.nonce,
+    68..|      TA = TransactionArray,
+    68..|      ArrSz = array:size(TA),
         |  
-    37..|      if
+    68..|      if
         |  	Nonce > ArrSz ->
      1..|  	    {ignore_nonce_too_high, TA};
         |  	Nonce < ArrSz ->
-     4..|  	    RecordedTransaction = array:get(Nonce, TA),
-     4..|  	    if 
+    16..|  	    RecordedTransaction = array:get(Nonce, TA),
+    16..|  	    if 
         |  		RecordedTransaction == Transaction ->
-     3..|  		    {ignore_duplicate, TA};
+    15..|  		    {ignore_duplicate, TA};
         |  		RecordedTransaction /= Transaction ->
      1..|  		    throw("same_nonce_different_transaction")
         |  	    end;
         |  	Nonce == ArrSz ->
-    32..|  	    NewTA = array:set(Nonce, Transaction, TA),
-    32..|  	    {added, NewTA}
+    51..|  	    NewTA = array:set(Nonce, Transaction, TA),
+    51..|  	    {added, NewTA}
         |      end.
         |  	    
         |  add_new_transaction_to_map(Transaction, TransactionMap)
         |    when is_record(Transaction, transaction) ->
         |  
-    37..|      Id=Transaction#transaction.player_id,
-    37..|      TM = TransactionMap,
-    37..|      Result = maps:find(Id, TM),
+    68..|      Id=Transaction#transaction.player_id,
+    68..|      TM = TransactionMap,
+    68..|      Result = maps:find(Id, TM),
         |  
-    37..|      case Result of
+    68..|      case Result of
         |  	{ok, TransactionArray} ->
-    24..|  	    pass;
+    49..|  	    pass;
         |  	error ->
-    13..|  	    TransactionArray = array:new()
+    19..|  	    TransactionArray = array:new()
         |      end,
         |  
-    37..|      {Msg, NewTA} = add_new_transaction_to_array(Transaction, TransactionArray),
-    36..|      NewTM = maps:put(Id, NewTA, TM),
-    36..|      {Msg, NewTM}.
+    68..|      {Msg, NewTA} = add_new_transaction_to_array(Transaction, TransactionArray),
+    67..|      NewTM = maps:put(Id, NewTA, TM),
+    67..|      {Msg, NewTM}.
         |      
         |  add_new_transaction(Transaction, VerifierData) 
         |    when is_record(Transaction, transaction),
         |         is_record(VerifierData, verifier_data) ->
         |  
-    37..|      TransactionMap = VerifierData#verifier_data.transaction_map,
+    68..|      TransactionMap = VerifierData#verifier_data.transaction_map,
         |  
-    37..|      {Msg, NewTM} = add_new_transaction_to_map(Transaction, TransactionMap),
+    68..|      {Msg, NewTM} = add_new_transaction_to_map(Transaction, TransactionMap),
         |  
-    36..|      NewVD = VerifierData#verifier_data{transaction_map=NewTM},
+    67..|      NewVD = VerifierData#verifier_data{transaction_map=NewTM},
         |  
-    36..|      {Msg, NewVD}.
+    67..|      {Msg, NewVD}.
         |  
         |      
         |  
@@ -74,12 +74,12 @@ File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree
         |  %%     ?assertEqual(array:to_list(NonceList), ProperNonceList, "bad nonce order").
         |  
         |  transaction_list_check_if_in_order(_, List) ->
-    12..|      NonceList = lists:map(fun (L) -> L#transaction.nonce end, List),
-    12..|      [FirstNonce | _] = NonceList,
-    12..|      Sz = length(List),
-    12..|      ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
+    19..|      NonceList = lists:map(fun (L) -> L#transaction.nonce end, List),
+    19..|      [FirstNonce | _] = NonceList,
+    19..|      Sz = length(List),
+    19..|      ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
         |  
-    12..|      ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
+    19..|      ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
         |  
         |  %% get_first_nonce_in_transaction_list(_, TransactionList) ->
         |  %%     FirstTransaction = array:get(0, TransactionList),
@@ -92,28 +92,28 @@ File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree
         |  %%     FirstNonce + Sz - 1.
         |  
         |  get_first_nonce_in_transaction_list(_, TransactionList) ->
-    12..|      [FirstTransaction | _ ] = TransactionList,
-    12..|      FirstTransaction#transaction.nonce.
+    19..|      [FirstTransaction | _ ] = TransactionList,
+    19..|      FirstTransaction#transaction.nonce.
         |  
         |  get_last_nonce_in_transaction_list(TransactionList) ->
-     4..|      [FirstTransaction | _ ] = TransactionList,
-     4..|      FirstNonce = FirstTransaction#transaction.nonce,
-     4..|      Sz = length(TransactionList),
-     4..|      FirstNonce + Sz - 1.
+    12..|      [FirstTransaction | _ ] = TransactionList,
+    12..|      FirstNonce = FirstTransaction#transaction.nonce,
+    12..|      Sz = length(TransactionList),
+    12..|      FirstNonce + Sz - 1.
         |  
         |  search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == undefined ->
-     2..|      -1;
+    10..|      -1;
         |  search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
-     6..|      {ok, Block} = maps:find(BlockId, BlockMap),
-     6..|      #block{previous_id=PrevBlockId, transactions=BlockTransactionsList} = Block,
+    20..|      {ok, Block} = maps:find(BlockId, BlockMap),
+    20..|      #block{previous_id=PrevBlockId, transactions=BlockTransactionsList} = Block,
         |  
-     6..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+    20..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
         |  
-     6..|      case maps:find(PlayerId, BlockTransactionsMap) of
+    20..|      case maps:find(PlayerId, BlockTransactionsMap) of
         |  	{ok, TransactionList} ->
-     4..|  	    get_last_nonce_in_transaction_list(TransactionList);
+    12..|  	    get_last_nonce_in_transaction_list(TransactionList);
         |  	error ->
-     2..|  	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
+     8..|  	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
         |      end.
         |  
         |  %% check_that_player_ids_are_correct(id, IdCheck, IdCorrect) when IdCheck == IdCorrect ->
@@ -129,71 +129,123 @@ File generated from /home/antongml/offline_projects/potato_game/erlang/blocktree
         |  %%     maps:map(fun(Id, Lst) -> check_that_player_ids_are_correct(list, Lst, Id) end, TransactionMap).
         |  
         |  transaction_map_from_list(ListR) ->
-    12..|      List = lists:reverse(ListR),
-    12..|      lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
+    29..|      List = lists:reverse(ListR),
+    29..|      lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
         |  transaction_map_from_list(T, Map) ->
-    38..|      Id=T#transaction.player_id,
-    38..|      case maps:find(Id, Map) of
+   120..|      Id=T#transaction.player_id,
+   120..|      case maps:find(Id, Map) of
         |  	{ok, OldList} ->
-    14..|  	    NewList = [T | OldList];
+    55..|  	    NewList = [T | OldList];
         |  	error ->
-    24..|  	    NewList = [T]
+    65..|  	    NewList = [T]
         |      end,
-    38..|      maps:put(Id, NewList, Map).
+   120..|      maps:put(Id, NewList, Map).
         |      
         |  
         |  add_new_block(Block, VerifierData) 
         |    when is_record(Block, block),
         |         is_record(VerifierData, verifier_data) ->
         |  
-     6..|      #verifier_data{block_map = BlockMap} = VerifierData,
-     6..|      #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
+     9..|      #verifier_data{block_map = BlockMap} = VerifierData,
+     9..|      #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
         |  
-     6..|      ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
+     9..|      ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
         |  
-     6..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+     9..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
         |  
-     6..|      maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
+     9..|      maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
         |  
         |      %% check_that_player_ids_are_correct(BlockTransactionsMap),
         |  
-     6..|      FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
+     9..|      FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
         |  
-     6..|      MapEmpty = maps:size(BlockMap) == 0,
-     6..|      if 
+     9..|      MapEmpty = maps:size(BlockMap) == 0,
+     9..|      if 
         |  	MapEmpty ->
-     4..|  	    ?assertEqual(Height, 0, "genesis, bad height"),
+     5..|  	    ?assertEqual(Height, 0, "genesis, bad height"),
         |  
-     4..|  	    ?assertEqual(PrevId, undefined, "genesis, bad previous_id"),
+     5..|  	    ?assertEqual(PrevId, undefined, "genesis, bad previous_id"),
         |  
-     4..|  	    ZeroNonceMap = maps:map(fun(_, _) -> 0 end, BlockTransactionsMap),
+     5..|  	    ZeroNonceMap = maps:map(fun(_, _) -> 0 end, BlockTransactionsMap),
         |  
-     4..|  	    ?assertEqual(FirstNonceMap,  ZeroNonceMap, "genesis, transactions not starting with zero");
+     5..|  	    ?assertEqual(FirstNonceMap,  ZeroNonceMap, "genesis, transactions not starting with zero");
         |  
         |  	not MapEmpty ->
-     2..|  	    Result = maps:find(PrevId, BlockMap),
+     4..|  	    Result = maps:find(PrevId, BlockMap),
+        |  
+     4..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
+        |  
+     4..|  	    {ok, PrevBlock} = Result,
+        |  
+     4..|  	    ?assertEqual(Height, PrevBlock#block.height + 1, "bad height"),
+        |  
+     4..|  	    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
+     4..|  	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
+        |  
+     4..|  	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
+        |      end,
+        |  
+     9..|      VD0 = VerifierData,
+        |  
+     9..|      NewBlockMap = maps:put(ThisId, Block, BlockMap),
+        |  
+     9..|      VD1 = VD0#verifier_data{block_map = NewBlockMap},
+        |  
+     9..|      ListFoldFn = fun(T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
+     9..|      MapFoldFn = fun(_, TransactionList, VD) -> lists:foldl(ListFoldFn, VD, TransactionList) end,
+        |  
+     9..|      VD2 = maps:fold(MapFoldFn, VD1, BlockTransactionsMap),
+        |  
+     9..|      VD2.
+        |  
+        |  extract_transaction_range(NonceFirst, FullTransactionArr) ->
+    11..|      extract_transaction_range(NonceFirst, array:size(FullTransactionArr)-1, FullTransactionArr).
+        |  
+        |  extract_transaction_range(NonceFirst, NonceLast, FullTransactionArr) when NonceFirst =< NonceLast ->
+    19..|      T = array:get(NonceFirst, FullTransactionArr),
+    19..|      [T | extract_transaction_range(NonceFirst + 1, NonceLast, FullTransactionArr)];
+        |  
+        |  extract_transaction_range(NonceFirst, NonceLast, _) when NonceFirst > NonceLast ->
+    11..|      [].
+        |  
+        |  extract_transaction_range_full(FirstNonceMap, TransactionMap) ->
+     4..|      Fn = fun(Id, _, Acc) ->
+    11..|  		 {ok, Nonce} = maps:find(Id, FirstNonceMap),
+    11..|  		 {ok, Arr} = maps:find(Id, TransactionMap),
+    11..|  		 L = extract_transaction_range(Nonce, Arr),
+    11..|  		 L ++ Acc
+        |  	 end,
+     4..|      maps:fold(Fn, [], FirstNonceMap).
+        |      
+        |  
+        |  generate_new_block(PreviousBlockId, VerifierData)
+        |    when is_record(VerifierData, verifier_data) ->
+     4..|      #verifier_data{block_map = BlockMap, transaction_map = TransactionMap} = VerifierData,
+        |  
+     4..|      if 
+        |  	PreviousBlockId == undefined ->
+     2..|  	    Height = 0;
+        |  
+        |  	PreviousBlockId /= undefined ->
+     2..|  	    Result = maps:find(PreviousBlockId, BlockMap),
         |  
      2..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
         |  
      2..|  	    {ok, PrevBlock} = Result,
         |  
-     2..|  	    ?assertEqual(Height, PrevBlock#block.height + 1, "bad height"),
-        |  
-     2..|  	    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
-     2..|  	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
-        |  
-     2..|  	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
+     2..|  	    Height = 1 + PrevBlock#block.height
         |      end,
         |  
-     6..|      VD0 = VerifierData,
+        |      
+     4..|      MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PreviousBlockId) end,
+     4..|      FirstNonceMap = maps:map(MapFn, TransactionMap),
         |  
-     6..|      NewBlockMap = maps:put(ThisId, Block, BlockMap),
+     4..|      BlockTransactions = extract_transaction_range_full(FirstNonceMap, TransactionMap),
+        |      
+     4..|      #block{previous_id = PreviousBlockId, height = Height, transactions = BlockTransactions}.
+        |      
         |  
-     6..|      VD1 = VD0#verifier_data{block_map = NewBlockMap},
-        |  
-     6..|      ListFoldFn = fun(T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
-     6..|      MapFoldFn = fun(_, TransactionList, VD) -> lists:foldl(ListFoldFn, VD, TransactionList) end,
-        |  
-     6..|      VD2 = maps:fold(MapFoldFn, VD1, BlockTransactionsMap),
-        |  
-     6..|      VD2.
+        |      
+        |      
+        |      
+        |      

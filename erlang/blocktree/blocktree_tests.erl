@@ -139,9 +139,57 @@ test_mult_blocks() ->
 
     VD1.
 
+test_generate_block_gen() ->
+    VD = #verifier_data{},
+
+    L = [{2, p1}, {3, p2}, {2, p1}],
+    VD1 = lists:foldl(fun add_mult_trans/2, VD, L),
+
+    B = blocktree:generate_new_block(undefined, VD1),
+    
+    ?assert(length(B#block.transactions) == 7),
+    
+    B.
+    
+
+test_generate_block_mult_seq() ->
+    VD = #verifier_data{},
+
+    L1 = [{2, p1}, {3, p2}],
+    L2 = [{1, p1}, {3, p3}, {1, p2}],
+    L3 = [{1, p2}, {1, p4}],
+
+    Batch = [L1, L2, L3],
+
+    Fn = fun (L, VD0) ->
+		 Id = maps:size(VD0#verifier_data.block_map),
+
+		 if 
+		     Id == 0 -> PrevId = undefined;
+		     Id /= 0 -> PrevId = Id - 1
+		 end,
+
+		 VD1 = lists:foldl(fun add_mult_trans/2, VD0, L),
+		 B = (blocktree:generate_new_block(PrevId, VD1))#block{this_id = Id},
+		 VD2 = blocktree:add_new_block(B, VD1),
+		 VD2
+	 end,
+
+    VD1 = lists:foldl(Fn, VD, Batch),
+
+    BMP = VD1#verifier_data.block_map,
+    ?assert(maps:size(BMP) == 3),
+    ?assert(length((maps:get(0, BMP))#block.transactions) == 5),
+    ?assert(length((maps:get(1, BMP))#block.transactions) == 5),
+    ?assert(length((maps:get(2, BMP))#block.transactions) == 2),
+
+    VD1.
+
 cmd() ->
     test_add_new_transaction(),
     test_add_empty_genesis(),
     test_add_tr_genesis(),
     test_add_tr_genesis_2(),
-    test_mult_blocks().
+    test_mult_blocks(),
+    test_generate_block_gen(),
+    test_generate_block_mult_seq().

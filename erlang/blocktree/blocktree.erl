@@ -1,6 +1,6 @@
 -module(blocktree).
 
--export([add_new_transaction/2, add_new_block/2]).
+-export([add_new_transaction/2, add_new_block/2, generate_new_block/2]).
 
 -include("blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -193,3 +193,55 @@ add_new_block(Block, VerifierData)
     VD2 = maps:fold(MapFoldFn, VD1, BlockTransactionsMap),
 
     VD2.
+
+extract_transaction_range(NonceFirst, FullTransactionArr) ->
+    extract_transaction_range(NonceFirst, array:size(FullTransactionArr)-1, FullTransactionArr).
+
+extract_transaction_range(NonceFirst, NonceLast, FullTransactionArr) when NonceFirst =< NonceLast ->
+    T = array:get(NonceFirst, FullTransactionArr),
+    [T | extract_transaction_range(NonceFirst + 1, NonceLast, FullTransactionArr)];
+
+extract_transaction_range(NonceFirst, NonceLast, _) when NonceFirst > NonceLast ->
+    [].
+
+extract_transaction_range_full(FirstNonceMap, TransactionMap) ->
+    Fn = fun(Id, _, Acc) ->
+		 {ok, Nonce} = maps:find(Id, FirstNonceMap),
+		 {ok, Arr} = maps:find(Id, TransactionMap),
+		 L = extract_transaction_range(Nonce, Arr),
+		 L ++ Acc
+	 end,
+    maps:fold(Fn, [], FirstNonceMap).
+    
+
+generate_new_block(PreviousBlockId, VerifierData)
+  when is_record(VerifierData, verifier_data) ->
+    #verifier_data{block_map = BlockMap, transaction_map = TransactionMap} = VerifierData,
+
+    if 
+	PreviousBlockId == undefined ->
+	    Height = 0;
+
+	PreviousBlockId /= undefined ->
+	    Result = maps:find(PreviousBlockId, BlockMap),
+
+	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
+
+	    {ok, PrevBlock} = Result,
+
+	    Height = 1 + PrevBlock#block.height
+    end,
+
+    
+    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PreviousBlockId) end,
+    FirstNonceMap = maps:map(MapFn, TransactionMap),
+
+    BlockTransactions = extract_transaction_range_full(FirstNonceMap, TransactionMap),
+    
+    #block{previous_id = PreviousBlockId, height = Height, transactions = BlockTransactions}.
+    
+
+    
+    
+    
+    
