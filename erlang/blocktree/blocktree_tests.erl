@@ -58,8 +58,8 @@ test_add_new_transaction() ->
 
     VD1.
 
-%% map_of_arrays_to_map_of_lists(Map) ->
-%%     maps:map(fun (_, A) -> array:to_list(A) end, Map).
+map_of_arrays_to_map_of_lists(Map) ->
+    maps:map(fun (_, A) -> array:to_list(A) end, Map).
     
 test_add_tr_genesis() ->
     VD = #verifier_data{transaction_map=maps:new(), block_map=maps:new()},
@@ -67,8 +67,8 @@ test_add_tr_genesis() ->
     VD1 = lists:foldl(fun add_mult_trans/2, VD, L),
 
     Block = #block{previous_id=undefined, this_id=0, height=0, 
-		   %% transactions = map_of_arrays_to_map_of_lists(VD1#verifier_data.transaction_map)},
-		   transactions = VD1#verifier_data.transaction_map},
+		   transactions = map_of_arrays_to_map_of_lists(VD1#verifier_data.transaction_map)},
+		   %% transactions = VD1#verifier_data.transaction_map},
     VD2 = blocktree:add_new_block(Block, VD),
     %% io:format("~p ~n", [VD1]),
     VD2.

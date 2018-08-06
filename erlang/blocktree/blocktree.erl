@@ -61,23 +61,40 @@ add_new_transaction(Transaction, VerifierData)
 
     
 
+%% transaction_list_check_if_in_order(_, List) ->
+%%     NonceList = array:map(fun (_, L) -> L#transaction.nonce end, List),
+%%     FirstNonce = array:get(0, NonceList),
+%%     Sz = array:size(List),
+%%     ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
+
+%%     ?assertEqual(array:to_list(NonceList), ProperNonceList, "bad nonce order").
+
 transaction_list_check_if_in_order(_, List) ->
-    NonceList = array:map(fun (_, L) -> L#transaction.nonce end, List),
-    FirstNonce = array:get(0, NonceList),
-    Sz = array:size(List),
+    NonceList = lists:map(fun (L) -> L#transaction.nonce end, List),
+    [FirstNonce | _] = NonceList,
+    Sz = length(List),
     ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
 
-    ?assertEqual(array:to_list(NonceList), ProperNonceList, "bad nonce order").
+    ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
 
+%% get_first_nonce_in_transaction_list(_, TransactionList) ->
+%%     FirstTransaction = array:get(0, TransactionList),
+%%     FirstTransaction#transaction.nonce.
+
+%% get_last_nonce_in_transaction_list(TransactionList) ->
+%%     FirstTransaction = array:get(0, TransactionList),
+%%     FirstNonce = FirstTransaction#transaction.nonce,
+%%     Sz = array:size(TransactionList),
+%%     FirstNonce + Sz - 1.
 
 get_first_nonce_in_transaction_list(_, TransactionList) ->
-    FirstTransaction = array:get(0, TransactionList),
+    [FirstTransaction | _ ] = TransactionList,
     FirstTransaction#transaction.nonce.
 
 get_last_nonce_in_transaction_list(TransactionList) ->
-    FirstTransaction = array:get(0, TransactionList),
+    [FirstTransaction | _ ] = TransactionList,
     FirstNonce = FirstTransaction#transaction.nonce,
-    Sz = array:size(TransactionList),
+    Sz = length(TransactionList),
     FirstNonce + Sz - 1.
 
 search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == undefined ->
@@ -102,7 +119,7 @@ check_that_player_ids_are_correct(transaction, Transaction, IdCorrect) ->
     IdCheck=Transaction#transaction.player_id,
     check_that_player_ids_are_correct(id, IdCheck, IdCorrect);
 check_that_player_ids_are_correct(list, TransactionList, IdCorrect) -> 
-    array:map(fun(_, T) -> check_that_player_ids_are_correct(transaction, T, IdCorrect) end, TransactionList).
+    lists:map(fun(T) -> check_that_player_ids_are_correct(transaction, T, IdCorrect) end, TransactionList).
 check_that_player_ids_are_correct(TransactionMap) -> 
     maps:map(fun(Id, Lst) -> check_that_player_ids_are_correct(list, Lst, Id) end, TransactionMap).
 
@@ -153,8 +170,8 @@ add_new_block(Block, VerifierData)
 
     VD1 = VD0#verifier_data{block_map = NewBlockMap},
 
-    ListFoldFn = fun(_, T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
-    MapFoldFn = fun(_, TransactionList, VD) -> array:foldl(ListFoldFn, VD, TransactionList) end,
+    ListFoldFn = fun(T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
+    MapFoldFn = fun(_, TransactionList, VD) -> lists:foldl(ListFoldFn, VD, TransactionList) end,
 
     VD2 = maps:fold(MapFoldFn, VD1, BlockTransactions),
 
