@@ -101,10 +101,11 @@ search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == unde
     -1;
 search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
     {ok, Block} = maps:find(BlockId, BlockMap),
-    #block{previous_id=PrevBlockId, transactions=BlockTransactions} = Block,
+    #block{previous_id=PrevBlockId, transactions=BlockTransactionsList} = Block,
 
+    BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
 
-    case maps:find(PlayerId, BlockTransactions) of
+    case maps:find(PlayerId, BlockTransactionsMap) of
 	{ok, TransactionList} ->
 	    get_last_nonce_in_transaction_list(TransactionList);
 	error ->
