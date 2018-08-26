@@ -2,25 +2,24 @@
 
 -export([test/1]).
 
--include("../blocktree/blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 test(Tp) ->
     io:fwrite("hello, world\n"),
-    if Tp == 1 ->
-            init();
-       Tp == 2 ->
-            client()
+    if Tp == server ->
+            start_server();
+       Tp == client ->
+            start_client()
     end.
 
-client() ->
+start_client() ->
     SomeHostInNet = "localhost", % to make it runnable on one machine
-    {ok, Sock} = gen_tcp:connect(SomeHostInNet, 5678, 
+    {ok, Sock} = gen_tcp:connect(SomeHostInNet, 5678,
                                  [binary, {active, true}]),
     ok = gen_tcp:send(Sock, "Some Data"),
     ok = gen_tcp:close(Sock).
 
-init() ->
+start_server() ->
     %% start listening server
     {ok, LSock} = gen_tcp:listen(5678, [binary, {active, true}]),
     %% TODO crash if not ok
@@ -49,4 +48,3 @@ handle(Socket) ->
             io:fwrite(Msg),
             handle(Socket)
     end.
-
