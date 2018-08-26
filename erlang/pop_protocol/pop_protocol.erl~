@@ -1,0 +1,7 @@
+-module(blocktree).
+
+%-export([add_new_transaction/2, add_new_block/2, generate_new_block/2]).
+
+-include("../blocktree/blocktree.hrl").
+-include_lib("stdlib/include/assert.hrl").
+
