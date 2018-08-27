@@ -47,17 +47,17 @@ add_new_transaction_to_map(Transaction, TransactionMap)
     NewTM = maps:put(Id, NewTA, TM),
     {Msg, NewTM}.
     
-add_new_transaction(Transaction, VerifierData) 
+add_new_transaction(Transaction, TreeData) 
   when is_record(Transaction, transaction),
-       is_record(VerifierData, verifier_data) ->
+       is_record(TreeData, tree_data) ->
 
-    TransactionMap = VerifierData#verifier_data.transaction_map,
+    TransactionMap = TreeData#tree_data.transaction_map,
 
     {Msg, NewTM} = add_new_transaction_to_map(Transaction, TransactionMap),
 
-    NewVD = VerifierData#verifier_data{transaction_map=NewTM},
+    NewTD = TreeData#tree_data{transaction_map=NewTM},
 
-    {Msg, NewVD}.
+    {Msg, NewTD}.
 
     
 
@@ -138,11 +138,11 @@ transaction_map_from_list(T, Map) ->
     maps:put(Id, NewList, Map).
     
 
-add_new_block(Block, VerifierData) 
+add_new_block(Block, TreeData) 
   when is_record(Block, block),
-       is_record(VerifierData, verifier_data) ->
+       is_record(TreeData, tree_data) ->
 
-    #verifier_data{block_map = BlockMap} = VerifierData,
+    #tree_data{block_map = BlockMap} = TreeData,
     #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
 
     ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
@@ -181,18 +181,18 @@ add_new_block(Block, VerifierData)
 	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
     end,
 
-    VD0 = VerifierData,
+    TD0 = TreeData,
 
     NewBlockMap = maps:put(ThisId, Block, BlockMap),
 
-    VD1 = VD0#verifier_data{block_map = NewBlockMap},
+    TD1 = TD0#tree_data{block_map = NewBlockMap},
 
-    ListFoldFn = fun(T, VD) -> {_, NewVD} = add_new_transaction(T, VD), NewVD end,
-    MapFoldFn = fun(_, TransactionList, VD) -> lists:foldl(ListFoldFn, VD, TransactionList) end,
+    ListFoldFn = fun(T, TD) -> {_, NewTD} = add_new_transaction(T, TD), NewTD end,
+    MapFoldFn = fun(_, TransactionList, TD) -> lists:foldl(ListFoldFn, TD, TransactionList) end,
 
-    VD2 = maps:fold(MapFoldFn, VD1, BlockTransactionsMap),
+    TD2 = maps:fold(MapFoldFn, TD1, BlockTransactionsMap),
 
-    VD2.
+    TD2.
 
 extract_transaction_range(NonceFirst, FullTransactionArr) ->
     extract_transaction_range(NonceFirst, array:size(FullTransactionArr)-1, FullTransactionArr).
@@ -214,9 +214,9 @@ extract_transaction_range_full(FirstNonceMap, TransactionMap) ->
     maps:fold(Fn, [], FirstNonceMap).
     
 
-generate_new_block(PreviousBlockId, VerifierData)
-  when is_record(VerifierData, verifier_data) ->
-    #verifier_data{block_map = BlockMap, transaction_map = TransactionMap} = VerifierData,
+generate_new_block(PreviousBlockId, TreeData)
+  when is_record(TreeData, tree_data) ->
+    #tree_data{block_map = BlockMap, transaction_map = TransactionMap} = TreeData,
 
     if 
 	PreviousBlockId == undefined ->

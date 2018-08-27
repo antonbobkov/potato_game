@@ -42,6 +42,7 @@ add_one_block(ProtocolData, Block)
 % check signature's correctness
 % check that signer is one of the verifiers
 % check that the time is correct for this verifier
+% (also check that it is not too far into the future)
 % should be larger, and have the correct remainder
 % (OPTIONAL) check sequence of different verifiers
 
