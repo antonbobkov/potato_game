@@ -1,6 +1,6 @@
 -module(blocktree).
 
--export([add_new_transaction/2, add_new_block/2, generate_new_block/2]).
+-export([add_new_transaction/2, add_new_block/2, generate_new_block/2, get_block_by_id/2]).
 
 -include("blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -241,7 +241,12 @@ generate_new_block(PreviousBlockId, TreeData)
     #block{previous_id = PreviousBlockId, height = Height, transactions = BlockTransactions}.
     
 
-    
-    
-    
-    
+get_block_by_id(TreeData, Id)    
+  when is_record(TreeData, tree_data) ->
+
+    #tree_data{block_map = BlockMap} = TreeData,
+    Result = maps:find(Id, BlockMap),
+
+    ?assertMatch({ok, _}, Result, "cannot find block by id"),
+    {ok, Block} = Result,
+    Block.
