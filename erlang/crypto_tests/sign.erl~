@@ -1,0 +1,8 @@
+-module(hash).
+
+-export([cmd/0]).
+
+-include_lib("stdlib/include/assert.hrl").
+
+cmd() ->
+    pass.
