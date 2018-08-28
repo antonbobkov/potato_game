@@ -11,6 +11,16 @@
 -record(protocol_data, {verifiers_arr, time_between_blocks, time_desync_margin, chain_id, tree_data}).
 -record(consensus_block_data, {signature, verifier_pub_key, verifier_index, timestamp}).
 
+compute_block_hash(Block) 
+  when 
+      is_record(Block, block) 
+      ->
+    B = Block#block{
+	  this_id=undefined, 
+	  consensus_data = #consensus_block_data{signature=undefined}
+	 },
+    crypto:hash(sha256, B).
+
 add_one_block(ProtocolData, Block, CurrentTime)
   when 
       is_record(ProtocolData, protocol_data), 
@@ -70,7 +80,9 @@ add_one_block(ProtocolData, Block, CurrentTime)
     
     
 
-% check ThisId hash correctness
+    % check ThisId hash correctness
+    ?assertEqual(ThisId, compute_block_hash(Block), "incorrect hash"),
+
 % check signature's correctness
 
 % (OPTIONAL) check sequence of different verifiers
