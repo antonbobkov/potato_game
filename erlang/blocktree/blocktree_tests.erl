@@ -19,7 +19,7 @@ add_transaction(next, Id, TD) ->
     NextNonce = get_next_nonce(Id, TD),
     add_transaction(NextNonce, Id, TD); 
 add_transaction(Nonce, Id, TD) ->
-    T = #transaction{nonce=Nonce, player_id=Id},
+    T = #{nonce => Nonce, player_id => Id},
     blocktree:add_new_transaction(T, TD).
 
 add_mult_trans({Count, _}, TD) when Count == 0 ->
@@ -47,7 +47,7 @@ test_add_new_transaction() ->
 
     ?assertMatch({ignore_duplicate, _}, add_transaction(1, p1, TD1)),
 
-    T = #transaction{nonce=1, player_id=p1, game_data=stuff},
+    T = #{nonce => 1, player_id => p1, game_data => stuff},
     ?assertThrow(_, blocktree:add_new_transaction(T, TD1)),
 
     TD1.
@@ -90,7 +90,7 @@ test_add_tr_genesis() ->
 
 make_block(PrevId, ThisId, Height, TrLs) ->
     Fn = fun({N, Id}, Ls) ->
-		 T = #transaction{nonce=N, player_id=Id},
+		 T = #{nonce => N, player_id => Id},
 		 [T | Ls]
 	 end,
     Transactions = lists:reverse(lists:foldl(Fn, [], TrLs)),
