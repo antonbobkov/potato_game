@@ -101,7 +101,7 @@ search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == unde
     -1;
 search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
     {ok, Block} = maps:find(BlockId, BlockMap),
-    #block{previous_id=PrevBlockId, transactions=BlockTransactionsList} = Block,
+    #{previous_id := PrevBlockId, transactions := BlockTransactionsList} = Block,
 
     BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
 
@@ -140,11 +140,11 @@ transaction_map_from_list(T, Map) ->
     
 
 add_new_block(Block, TreeData) 
-  when is_record(Block, block),
+  when is_map(Block),
        is_record(TreeData, tree_data) ->
 
     #tree_data{block_map = BlockMap} = TreeData,
-    #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
+    #{previous_id := PrevId, this_id := ThisId, height := Height, transactions := BlockTransactionsList} = Block,
 
     ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
 
@@ -174,7 +174,7 @@ add_new_block(Block, TreeData)
 
 	    {ok, PrevBlock} = Result,
 
-	    ?assertEqual(Height, PrevBlock#block.height + 1, "bad height"),
+	    ?assertEqual(Height, maps:get(height, PrevBlock) + 1, "bad height"),
 
 	    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
 	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
@@ -230,7 +230,7 @@ generate_new_block(PreviousBlockId, TreeData)
 
 	    {ok, PrevBlock} = Result,
 
-	    Height = 1 + PrevBlock#block.height
+	    Height = 1 + maps:get(height, PrevBlock)
     end,
 
     
@@ -239,7 +239,7 @@ generate_new_block(PreviousBlockId, TreeData)
 
     BlockTransactions = extract_transaction_range_full(FirstNonceMap, TransactionMap),
     
-    #block{previous_id = PreviousBlockId, height = Height, transactions = BlockTransactions}.
+    #{previous_id => PreviousBlockId, height => Height, transactions => BlockTransactions}.
     
 
 get_block_by_id(TreeData, Id)    
