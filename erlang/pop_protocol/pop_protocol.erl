@@ -2,7 +2,10 @@
 
 %-export([add_new_transaction/2, add_new_block/2, generate_new_block/2]).
 %-import(blocktree, [add_new_transaction/2, add_new_block/2, generate_new_block/2]).
+
 -import(blocktree, [add_new_block/2, get_block_by_id/2]).
+-import(my_crypto, [hash/1, sign/2, verify/3]).
+
 
 -include("../blocktree/blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -19,7 +22,7 @@ compute_block_hash(Block)
 	  this_id=undefined, 
 	  consensus_data = #consensus_block_data{signature=undefined}
 	 },
-    crypto:hash(sha256, B).
+    my_crypto:hash(B).
 
 add_one_block(ProtocolData, Block, CurrentTime)
   when 
