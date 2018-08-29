@@ -239,7 +239,13 @@ generate_new_block(PreviousBlockId, TreeData)
 
     BlockTransactions = extract_transaction_range_full(FirstNonceMap, TransactionMap),
     
-    #{previous_id => PreviousBlockId, height => Height, transactions => BlockTransactions}.
+    #{
+      previous_id => PreviousBlockId,
+      this_id => undefined,
+      height => Height,
+      transactions => BlockTransactions,
+      consensus_data => undefined
+     }.
     
 
 get_block_by_id(TreeData, Id)    

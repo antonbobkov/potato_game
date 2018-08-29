@@ -170,7 +170,7 @@ test_generate_block_mult_seq() ->
 		 end,
 
 		 TD1 = lists:foldl(fun add_mult_trans/2, TD0, L),
-		 B = (blocktree:generate_new_block(PrevId, TD1))#{this_id => Id},
+		 B = (blocktree:generate_new_block(PrevId, TD1))#{this_id := Id},
 		 TD2 = blocktree:add_new_block(B, TD1),
 		 TD2
 	 end,
