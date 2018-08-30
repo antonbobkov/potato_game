@@ -7,9 +7,9 @@
 
 
 add_new_transaction_to_array(Transaction, TransactionArray)
-  when is_record(Transaction, transaction) ->
+  when is_map(Transaction) ->
 
-    Nonce = Transaction#transaction.nonce,
+    Nonce = maps:get(nonce, Transaction),
     TA = TransactionArray,
     ArrSz = array:size(TA),
 
@@ -30,9 +30,9 @@ add_new_transaction_to_array(Transaction, TransactionArray)
     end.
 	    
 add_new_transaction_to_map(Transaction, TransactionMap)
-  when is_record(Transaction, transaction) ->
+  when is_map(Transaction) ->
 
-    Id=Transaction#transaction.player_id,
+    Id = maps:get(player_id, Transaction),
     TM = TransactionMap,
     Result = maps:find(Id, TM),
 
@@ -48,7 +48,7 @@ add_new_transaction_to_map(Transaction, TransactionMap)
     {Msg, NewTM}.
     
 add_new_transaction(Transaction, TreeData) 
-  when is_record(Transaction, transaction),
+  when is_map(Transaction),
        is_record(TreeData, tree_data) ->
 
     TransactionMap = TreeData#tree_data.transaction_map,
@@ -70,7 +70,7 @@ add_new_transaction(Transaction, TreeData)
 %%     ?assertEqual(array:to_list(NonceList), ProperNonceList, "bad nonce order").
 
 transaction_list_check_if_in_order(_, List) ->
-    NonceList = lists:map(fun (L) -> L#transaction.nonce end, List),
+    NonceList = lists:map(fun (T) -> maps:get(nonce, T) end, List),
     [FirstNonce | _] = NonceList,
     Sz = length(List),
     ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
@@ -89,11 +89,11 @@ transaction_list_check_if_in_order(_, List) ->
 
 get_first_nonce_in_transaction_list(_, TransactionList) ->
     [FirstTransaction | _ ] = TransactionList,
-    FirstTransaction#transaction.nonce.
+    maps:get(nonce, FirstTransaction).
 
 get_last_nonce_in_transaction_list(TransactionList) ->
     [FirstTransaction | _ ] = TransactionList,
-    FirstNonce = FirstTransaction#transaction.nonce,
+    FirstNonce = maps:get(nonce, FirstTransaction),
     Sz = length(TransactionList),
     FirstNonce + Sz - 1.
 
@@ -101,7 +101,7 @@ search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == unde
     -1;
 search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
     {ok, Block} = maps:find(BlockId, BlockMap),
-    #block{previous_id=PrevBlockId, transactions=BlockTransactionsList} = Block,
+    #{previous_id := PrevBlockId, transactions := BlockTransactionsList} = Block,
 
     BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
 
@@ -128,7 +128,8 @@ transaction_map_from_list(ListR) ->
     List = lists:reverse(ListR),
     lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
 transaction_map_from_list(T, Map) ->
-    Id=T#transaction.player_id,
+    Id = maps:get(player_id, T),
+    
     case maps:find(Id, Map) of
 	{ok, OldList} ->
 	    NewList = [T | OldList];
@@ -139,11 +140,11 @@ transaction_map_from_list(T, Map) ->
     
 
 add_new_block(Block, TreeData) 
-  when is_record(Block, block),
+  when is_map(Block),
        is_record(TreeData, tree_data) ->
 
     #tree_data{block_map = BlockMap} = TreeData,
-    #block{previous_id=PrevId, this_id=ThisId, height=Height, transactions=BlockTransactionsList} = Block,
+    #{previous_id := PrevId, this_id := ThisId, height := Height, transactions := BlockTransactionsList} = Block,
 
     ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),    
 
@@ -173,7 +174,7 @@ add_new_block(Block, TreeData)
 
 	    {ok, PrevBlock} = Result,
 
-	    ?assertEqual(Height, PrevBlock#block.height + 1, "bad height"),
+	    ?assertEqual(Height, maps:get(height, PrevBlock) + 1, "bad height"),
 
 	    MapFn = fun(PlayerId, _) -> 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
 	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
@@ -229,7 +230,7 @@ generate_new_block(PreviousBlockId, TreeData)
 
 	    {ok, PrevBlock} = Result,
 
-	    Height = 1 + PrevBlock#block.height
+	    Height = 1 + maps:get(height, PrevBlock)
     end,
 
     
@@ -238,7 +239,13 @@ generate_new_block(PreviousBlockId, TreeData)
 
     BlockTransactions = extract_transaction_range_full(FirstNonceMap, TransactionMap),
     
-    #block{previous_id = PreviousBlockId, height = Height, transactions = BlockTransactions}.
+    #{
+      previous_id => PreviousBlockId,
+      this_id => undefined,
+      height => Height,
+      transactions => BlockTransactions,
+      consensus_data => undefined
+     }.
     
 
 get_block_by_id(TreeData, Id)    

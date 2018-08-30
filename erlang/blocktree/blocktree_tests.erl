@@ -19,7 +19,7 @@ add_transaction(next, Id, TD) ->
     NextNonce = get_next_nonce(Id, TD),
     add_transaction(NextNonce, Id, TD); 
 add_transaction(Nonce, Id, TD) ->
-    T = #transaction{nonce=Nonce, player_id=Id},
+    T = #{nonce => Nonce, player_id => Id},
     blocktree:add_new_transaction(T, TD).
 
 add_mult_trans({Count, _}, TD) when Count == 0 ->
@@ -47,14 +47,14 @@ test_add_new_transaction() ->
 
     ?assertMatch({ignore_duplicate, _}, add_transaction(1, p1, TD1)),
 
-    T = #transaction{nonce=1, player_id=p1, game_data=stuff},
+    T = #{nonce => 1, player_id => p1, game_data => stuff},
     ?assertThrow(_, blocktree:add_new_transaction(T, TD1)),
 
     TD1.
 
 test_add_empty_genesis() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
-    Block = #block{previous_id=undefined, this_id=0, height=0, transactions=[]},
+    Block = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
     TD1 = blocktree:add_new_block(Block, TD),
 
     BMP = TD1#tree_data.block_map,
@@ -72,8 +72,8 @@ test_add_tr_genesis() ->
     L = [{2, p1}, {3, p2}, {2, p1}],
     TDD = lists:foldl(fun add_mult_trans/2, TD, L),
 
-    Block = #block{previous_id=undefined, this_id=0, height=0, 
-		   transactions = map_of_arrays_to_list(TDD#tree_data.transaction_map)},
+    Block = #{previous_id => undefined, this_id => 0, height => 0, 
+		   transactions => map_of_arrays_to_list(TDD#tree_data.transaction_map)},
 		   %% transactions = TD1#tree_data.transaction_map},
     TD1 = blocktree:add_new_block(Block, TD),
 
@@ -90,13 +90,13 @@ test_add_tr_genesis() ->
 
 make_block(PrevId, ThisId, Height, TrLs) ->
     Fn = fun({N, Id}, Ls) ->
-		 T = #transaction{nonce=N, player_id=Id},
+		 T = #{nonce => N, player_id => Id},
 		 [T | Ls]
 	 end,
     Transactions = lists:reverse(lists:foldl(Fn, [], TrLs)),
 
-    #block{previous_id=PrevId, this_id=ThisId, height=Height, 
-		   transactions = Transactions}.
+    #{previous_id => PrevId, this_id => ThisId, height => Height, 
+		   transactions  =>  Transactions}.
 
 test_add_tr_genesis_2() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
@@ -147,7 +147,7 @@ test_generate_block_gen() ->
 
     B = blocktree:generate_new_block(undefined, TD1),
     
-    ?assert(length(B#block.transactions) == 7),
+    ?assert(length(maps:get(transactions, B)) == 7),
     
     B.
     
@@ -170,7 +170,7 @@ test_generate_block_mult_seq() ->
 		 end,
 
 		 TD1 = lists:foldl(fun add_mult_trans/2, TD0, L),
-		 B = (blocktree:generate_new_block(PrevId, TD1))#block{this_id = Id},
+		 B = (blocktree:generate_new_block(PrevId, TD1))#{this_id := Id},
 		 TD2 = blocktree:add_new_block(B, TD1),
 		 TD2
 	 end,
@@ -179,9 +179,9 @@ test_generate_block_mult_seq() ->
 
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 3),
-    ?assert(length((maps:get(0, BMP))#block.transactions) == 5),
-    ?assert(length((maps:get(1, BMP))#block.transactions) == 5),
-    ?assert(length((maps:get(2, BMP))#block.transactions) == 2),
+    ?assert(length(maps:get(transactions, maps:get(0, BMP))) == 5),
+    ?assert(length(maps:get(transactions, maps:get(1, BMP))) == 5),
+    ?assert(length(maps:get(transactions, maps:get(2, BMP))) == 2),
 
     TD1.
 
