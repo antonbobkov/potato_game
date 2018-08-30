@@ -30,6 +30,28 @@ compute_transaction_hash(Transaction) when is_map(Transaction) ->
 	 },
     my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
 
+check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
+    #{
+      consensus_data := CD,
+      player_id := PlrKey
+     } = Transaction,
+
+    #{
+      signature := PlrSgn,
+      chain_id := TrChainId
+     } = CD,
+
+    Hash = compute_transaction_hash(Transaction),
+
+    %% verify signature's correctness
+    ?assert(my_crypto:verify(Hash, PlrSgn, PlrKey), "transaction signature failed verification"),
+
+    %% compare ChainId
+    ?assertEqual(TrChainId, ChainId, "bad transaction ChainId"),
+
+    ok.
+    
+
 add_one_block(ProtocolData, Block, CurrentTime)
   when 
       is_record(ProtocolData, protocol_data), 
@@ -45,10 +67,6 @@ add_one_block(ProtocolData, Block, CurrentTime)
        tree_data = TD0
       } = ProtocolData,
 
-    %% add this block to tree_data 
-    %% this can trigger errors if the block if poorly formed
-    %% also fails if block is orphan or already exists
-    TD1 = blocktree:add_new_block(Block, TD0),
     
 
     #{
@@ -87,8 +105,6 @@ add_one_block(ProtocolData, Block, CurrentTime)
     VerNum = array:size(VerifiersArr),
     ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
     
-    
-
     %% check ThisId hash correctness
     Hash = ThisId,
     ?assertEqual(Hash, compute_block_hash(Block), "incorrect hash"),
@@ -98,10 +114,14 @@ add_one_block(ProtocolData, Block, CurrentTime)
 
     %% (OPTIONAL) check sequence of different verifiers
 
-    %% Look at transactions
-    %% verify signature's correctness
-    %% compare ChainId
+    %% Verify transactions
+    lists:map(fun(T) -> check_transaction_correctness(T, MainChainId) end, BlockTransactionsList),
 
-    pass.
+    %% add this block to tree_data 
+    %% this can trigger errors if the block if poorly formed
+    %% also fails if block is orphan or already exists
+    TD1 = blocktree:add_new_block(Block, TD0),
+
+    TD1.
 
 
