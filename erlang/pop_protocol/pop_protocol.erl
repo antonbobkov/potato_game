@@ -1,19 +1,14 @@
 -module(pop_protocol).
 
 -export([add_one_block/3]).
-%%-import(blocktree, [add_new_transaction/2, add_new_block/2, generate_new_block/2]).
 
 -import(blocktree, [add_new_block/2, get_block_by_id/2]).
 -import(my_crypto, [hash/1, sign/2, verify/3]).
 -import(my_serializer, [serialize_object/1]).
 
-
--include("../blocktree/blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
--record(verifier_public_info, {index, public_key, network_data}).
--record(protocol_data, {verifiers_arr, time_between_blocks, time_desync_margin, chain_id, tree_data}).
-%% -record(consensus_block_data, {signature, verifier_pub_key, verifier_index, timestamp}).
+-include("../potato_records.hrl").
 
 compute_block_hash(Block) when is_map(Block) ->
     #{consensus_data := CD} = Block,
