@@ -117,6 +117,8 @@ add_one_block(ProtocolData, Block, CurrentTime)
     %% also fails if block is orphan or already exists
     TD1 = blocktree:add_new_block(Block, TD0),
 
-    TD1.
+    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1},
+
+    NewProtocolData.
 
 
