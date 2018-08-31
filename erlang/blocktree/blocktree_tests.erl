@@ -3,7 +3,7 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
--include("blocktree.hrl").
+-include("../potato_records.hrl").
 
 get_next_nonce(Id, TD) ->
     Map = TD#tree_data.transaction_map,

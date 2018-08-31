@@ -2,8 +2,9 @@
 
 -export([add_new_transaction/2, add_new_block/2, generate_new_block/2, get_block_by_id/2]).
 
--include("blocktree.hrl").
 -include_lib("stdlib/include/assert.hrl").
+
+-include("../potato_records.hrl").
 
 
 add_new_transaction_to_array(Transaction, TransactionArray)
