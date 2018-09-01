@@ -137,6 +137,8 @@ test_mult_blocks() ->
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 3),
 
+    ?assertEqual(length(blocktree:get_all_longest_branches(TD1)), 2),
+
     TD1.
 
 test_generate_block_gen() ->
@@ -182,6 +184,14 @@ test_generate_block_mult_seq() ->
     ?assert(length(maps:get(transactions, maps:get(0, BMP))) == 5),
     ?assert(length(maps:get(transactions, maps:get(1, BMP))) == 5),
     ?assert(length(maps:get(transactions, maps:get(2, BMP))) == 2),
+
+    blocktree:get_block_by_id(0, TD1),
+    blocktree:get_block_by_id(2, TD1),
+
+    ?assertError(_, blocktree:get_block_by_id(5, TD1)),
+    ?assertError(_, blocktree:get_block_by_id(hi, TD1)),
+
+    ?assertEqual(length(blocktree:get_all_longest_branches(TD1)), 1),
 
     TD1.
 

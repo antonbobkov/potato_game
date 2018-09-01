@@ -1,6 +1,12 @@
 -module(blocktree).
 
--export([add_new_transaction/2, add_new_block/2, generate_new_block/2, get_block_by_id/2]).
+-export([
+	 add_new_transaction/2,
+	 add_new_block/2,
+	 generate_new_block/2,
+	 get_block_by_id/2,
+	 get_all_longest_branches/1
+	]).
 
 -include_lib("stdlib/include/assert.hrl").
 
@@ -258,3 +264,22 @@ get_block_by_id(Id, TreeData)
     ?assertMatch({ok, _}, Result, "cannot find block by id"),
     {ok, Block} = Result,
     Block.
+
+get_all_longest_branches(TreeData) 
+  when is_record(TreeData, tree_data) ->
+    #tree_data{block_map = BlockMap} = TreeData,
+    MaxHtFn = fun(_, V, Max) -> max(maps:get(height, V), Max) end,
+    MaxHt = maps:fold(MaxHtFn, 0, BlockMap),
+    
+    HtExtractFn = fun(_, V, List) -> 
+			  Ht = maps:get(height, V),
+			  if Ht == MaxHt ->
+				  [V | List];
+			     true ->
+				  List
+			  end
+		  end,
+
+    MaxHtList = maps:fold(HtExtractFn, [], BlockMap),
+
+    MaxHtList.
