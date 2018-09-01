@@ -249,7 +249,7 @@ generate_new_block(PreviousBlockId, TreeData)
      }.
     
 
-get_block_by_id(TreeData, Id)    
+get_block_by_id(Id, TreeData)    
   when is_record(TreeData, tree_data) ->
 
     #tree_data{block_map = BlockMap} = TreeData,
