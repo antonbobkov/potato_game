@@ -1,1 +1,1 @@
- erlc -o beam/ `find . -not -path './p2p/*' -name '*.erl'`
+ erlc -o ebin/ `find . -not -path './p2p/*' -name '*.erl'`

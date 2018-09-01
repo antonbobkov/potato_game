@@ -1,6 +1,6 @@
 -module(pop_protocol).
 
--export([add_one_block/3]).
+-export([add_one_block/3, get_genesis_tree_data/1]).
 
 -import(blocktree, [add_new_block/2, get_block_by_id/2]).
 -import(my_crypto, [hash/1, sign/2, verify/3]).
@@ -47,7 +47,7 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
     ok.
     
 
-add_one_block(ProtocolData, Block, CurrentTime)
+add_one_block(Block, CurrentTime, ProtocolData)
   when 
       is_record(ProtocolData, protocol_data), 
       is_map(Block)
@@ -91,7 +91,7 @@ add_one_block(ProtocolData, Block, CurrentTime)
     %% (also check that it is not too far into the future)
     %% should be larger, and have the correct remainder
     
-    PreviousBlock = blocktree:get_block_by_id(TD0, PrevId),
+    PreviousBlock = blocktree:get_block_by_id(PrevId, TD0),
     PreviousBlockTimestamp = maps:get(timestamp, maps:get(consensus_data, PreviousBlock)),
 
     ?assert(PreviousBlockTimestamp < Tmp, "time should be larger than previous"),
@@ -121,4 +121,9 @@ add_one_block(ProtocolData, Block, CurrentTime)
 
     NewProtocolData.
 
-
+get_genesis_tree_data(CurrentTime) ->
+    TD0 = #tree_data{},
+    B0 = blocktree:generate_new_block(undefined, TD0),
+    B1 = B0#{consensus_data := #{timestamp => CurrentTime}},
+    TD1 = blocktree:add_new_block(B1, TD0),
+    TD1.
