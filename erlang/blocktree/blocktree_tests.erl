@@ -14,10 +14,10 @@ get_next_nonce(Id, TD) ->
 	error ->
 	    0
     end.
-    
+
 add_transaction(next, Id, TD) ->
     NextNonce = get_next_nonce(Id, TD),
-    add_transaction(NextNonce, Id, TD); 
+    add_transaction(NextNonce, Id, TD);
 add_transaction(Nonce, Id, TD) ->
     T = #{nonce => Nonce, player_id => Id},
     blocktree:add_new_transaction(T, TD).
@@ -66,13 +66,13 @@ test_add_empty_genesis() ->
 map_of_arrays_to_list(Map) ->
     M = maps:map(fun (_, A) -> array:to_list(A) end, Map),
     maps:fold(fun (_, L, Acc) -> L ++ Acc end, [], M).
-    
+
 test_add_tr_genesis() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
     L = [{2, p1}, {3, p2}, {2, p1}],
     TDD = lists:foldl(fun add_mult_trans/2, TD, L),
 
-    Block = #{previous_id => undefined, this_id => 0, height => 0, 
+    Block = #{previous_id => undefined, this_id => 0, height => 0,
 		   transactions => map_of_arrays_to_list(TDD#tree_data.transaction_map)},
 		   %% transactions = TD1#tree_data.transaction_map},
     TD1 = blocktree:add_new_block(Block, TD),
@@ -80,7 +80,7 @@ test_add_tr_genesis() ->
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 2),
     ?assert(array:size(maps:get(p1, MP)) == 4),
-    ?assert(array:size(maps:get(p2, MP)) == 3),    
+    ?assert(array:size(maps:get(p2, MP)) == 3),
 
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 1),
@@ -95,7 +95,7 @@ make_block(PrevId, ThisId, Height, TrLs) ->
 	 end,
     Transactions = lists:reverse(lists:foldl(Fn, [], TrLs)),
 
-    #{previous_id => PrevId, this_id => ThisId, height => Height, 
+    #{previous_id => PrevId, this_id => ThisId, height => Height,
 		   transactions  =>  Transactions}.
 
 test_add_tr_genesis_2() ->
@@ -108,7 +108,7 @@ test_add_tr_genesis_2() ->
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 2),
     ?assert(array:size(maps:get(p1, MP)) == 2),
-    ?assert(array:size(maps:get(p2, MP)) == 1),    
+    ?assert(array:size(maps:get(p2, MP)) == 1),
 
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 1),
@@ -130,9 +130,9 @@ test_mult_blocks() ->
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 4),
     ?assert(array:size(maps:get(p1, MP)) == 3),
-    ?assert(array:size(maps:get(p2, MP)) == 3),    
+    ?assert(array:size(maps:get(p2, MP)) == 3),
     ?assert(array:size(maps:get(p3, MP)) == 1),
-    ?assert(array:size(maps:get(p4, MP)) == 1),    
+    ?assert(array:size(maps:get(p4, MP)) == 1),
 
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 3),
@@ -148,11 +148,11 @@ test_generate_block_gen() ->
     TD1 = lists:foldl(fun add_mult_trans/2, TD, L),
 
     B = blocktree:generate_new_block(undefined, TD1),
-    
+
     ?assert(length(maps:get(transactions, B)) == 7),
-    
+
     B.
-    
+
 
 test_generate_block_mult_seq() ->
     TD = #tree_data{},
@@ -166,7 +166,7 @@ test_generate_block_mult_seq() ->
     Fn = fun (L, TD0) ->
 		 Id = maps:size(TD0#tree_data.block_map),
 
-		 if 
+		 if
 		     Id == 0 -> PrevId = undefined;
 		     Id /= 0 -> PrevId = Id - 1
 		 end,
@@ -195,6 +195,23 @@ test_generate_block_mult_seq() ->
 
     TD1.
 
+  test_get_all_longest_branches() ->
+    TD0 = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
+    Block0 = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
+    Block1 = #{previous_id => 0, this_id => 1, height => 1, transactions => []},
+    Block2 = #{previous_id => 1, this_id => 2, height => 2, transactions => []},
+    %% fork from genesis
+    Block3 = #{previous_id => 0, this_id => 3, height => 1, transactions => []},
+    Block4 = #{previous_id => 1, this_id => 4, height => 2, transactions => []},
+    TD1 = blocktree:add_new_block(Block0, TD0),
+    TD2 = blocktree:add_new_block(Block1, TD1),
+    TD3 = blocktree:add_new_block(Block2, TD2),
+    TD4 = blocktree:add_new_block(Block3, TD3),
+    TD5 = blocktree:add_new_block(Block4, TD4),
+    ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
+    TD5.
+
+
 cmd() ->
     test_add_new_transaction(),
     test_add_empty_genesis(),
@@ -202,4 +219,5 @@ cmd() ->
     test_add_tr_genesis_2(),
     test_mult_blocks(),
     test_generate_block_gen(),
-    test_generate_block_mult_seq().
+    test_generate_block_mult_seq(),
+    test_get_all_longest_branches().
