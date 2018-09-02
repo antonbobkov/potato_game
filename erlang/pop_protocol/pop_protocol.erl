@@ -2,13 +2,39 @@
 
 -export([add_one_block/3, get_genesis_tree_data/1]).
 
--import(blocktree, [add_new_block/2, get_block_by_id/2]).
--import(my_crypto, [hash/1, sign/2, verify/3]).
--import(my_serializer, [serialize_object/1]).
+%% -import(blocktree, [add_new_block/2, get_block_by_id/2]).
+%% -import(my_crypto, [hash/1, sign/2, verify/3]).
+%% -import(my_serializer, [serialize_object/1]).
 
 -include_lib("stdlib/include/assert.hrl").
 
 -include("../potato_records.hrl").
+
+map_key_match_assert(Map, KeyList) ->
+    K1 = lists:sort(maps:keys(Map)),
+    K2 = lists:sort(KeyList),
+    ?assertEqual(K1, K2, {"key mismatch", K1, K2}),
+    ok.
+
+transaction_map_structure_assert(T) when is_map(T) ->
+    map_key_match_assert(T, [game_data, nonce, player_id, consensus_data]),
+    
+    CD = maps:get(consensus_data, T),
+    map_key_match_assert(CD, [signature, chain_id]),
+    
+    ok.
+
+check_block_map_structure(B) when is_map(B) ->
+    map_key_match_assert(B, [previous_id, this_id, height, transactions, consensus_data]),
+    
+    CD = maps:get(consensus_data, B),
+    map_key_match_assert(CD, [signature, verifier_pub_key, verifier_index, timestamp]),
+    
+    TL = maps:get(transactions, B),
+    lists:map(fun transaction_map_structure_assert/1, TL),
+    
+    ok.
+    
 
 compute_block_hash(Block) when is_map(Block) ->
     #{consensus_data := CD} = Block,
@@ -53,6 +79,7 @@ add_one_block(Block, CurrentTime, ProtocolData)
       is_map(Block)
       ->
 
+    check_block_map_structure(Block),
 
     #protocol_data{
        verifiers_arr = VerifiersArr, 
@@ -124,6 +151,15 @@ add_one_block(Block, CurrentTime, ProtocolData)
 get_genesis_tree_data(CurrentTime) ->
     TD0 = #tree_data{},
     B0 = blocktree:generate_new_block(undefined, TD0),
-    B1 = B0#{consensus_data := #{timestamp => CurrentTime}},
+    B1 = B0#{
+	     this_id := genesis,
+	     consensus_data := #{
+				 timestamp => CurrentTime,
+				 signature => undefined, 
+				 verifier_pub_key => undefined, 
+				 verifier_index => undefined
+				}
+	    },
+    check_block_map_structure(B1),
     TD1 = blocktree:add_new_block(B1, TD0),
     TD1.

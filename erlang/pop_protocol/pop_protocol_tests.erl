@@ -54,7 +54,7 @@ cmd() ->
 	    tree_data = pop_protocol:get_genesis_tree_data(CurrentTime)
 	   },
     
-    Block = make_block(undefined, PrivateKey, PublicKey, 1, 110),
+    Block = make_block(genesis, PrivateKey, PublicKey, 1, 110),
 
     pop_protocol:add_one_block(Block, 115, PD0),
     ok.
