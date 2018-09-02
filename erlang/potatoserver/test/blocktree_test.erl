@@ -1,9 +1,9 @@
--module(blocktree_tests).
--export([cmd/0]).
+-module(blocktree_test).
+-export([blocktree_test/0]).
 
 -include_lib("stdlib/include/assert.hrl").
 
--include("../potato_records.hrl").
+-include("../src/potato_records.hrl").
 
 get_next_nonce(Id, TD) ->
     Map = TD#tree_data.transaction_map,
@@ -211,8 +211,7 @@ test_generate_block_mult_seq() ->
     ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
     TD5.
 
-
-cmd() ->
+blocktree_test() ->
     test_add_new_transaction(),
     test_add_empty_genesis(),
     test_add_tr_genesis(),
