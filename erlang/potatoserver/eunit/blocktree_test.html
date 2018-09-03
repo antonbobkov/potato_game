@@ -1,0 +1,227 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/cover/eunit/blocktree_test.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/lib/potatoserver/test/blocktree_test.erl by COVER 2018-09-03 at 22:34:20
+
+****************************************************************************
+
+        |  -module(blocktree_test).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  -include("../src/potato_records.hrl").
+        |  
+        |  get_next_nonce(Id, TD) -&gt;
+    66..|      Map = TD#tree_data.transaction_map,
+    66..|      Result = maps:find(Id, Map),
+    66..|      case Result of
+        |  	{ok, TransactionArray} -&gt;
+    46..|  	    array:size(TransactionArray);
+        |  	error -&gt;
+    20..|  	    0
+        |      end.
+        |  
+        |  add_transaction(next, Id, TD) -&gt;
+<font color=red>     0..|      NextNonce = get_next_nonce(Id, TD),</font>
+<font color=red>     0..|      add_transaction(NextNonce, Id, TD);</font>
+        |  add_transaction(Nonce, Id, TD) -&gt;
+    70..|      T = #{nonce =&gt; Nonce, player_id =&gt; Id},
+    70..|      blocktree:add_new_transaction(T, TD).
+        |  
+        |  add_mult_trans({Count, _}, TD) when Count == 0 -&gt;
+    32..|      TD;
+        |  add_mult_trans({Count, Id}, TD) when Count &gt; 0 -&gt;
+    66..|      NextNonce = get_next_nonce(Id, TD),
+    66..|      {_Msg, NewTD} = add_transaction(NextNonce, Id, TD),
+        |      %% io:format("~p ~p ~p ~n", [Id, NextNonce, Msg]),
+    66..|      add_mult_trans({Count-1, Id}, NewTD).
+        |  
+        |  add_new_transaction_test() -&gt;
+     2..|      TD = #tree_data{transaction_map=maps:new()},
+        |  
+     2..|      ?assertMatch({ignore_nonce_too_high, _}, add_transaction(1, p1, TD)),
+        |  
+     2..|      L = [{2, p1}, {3, p2}, {2, p1}],
+     2..|      TD1 = lists:foldl(fun add_mult_trans/2, TD, L),
+        |      %% io:format("~p ~n", [TD1]),
+        |  
+        |  
+     2..|      MP = TD1#tree_data.transaction_map,
+     2..|      ?assert(maps:size(MP) == 2),
+     2..|      ?assert(array:size(maps:get(p1, MP)) == 4),
+     2..|      ?assert(array:size(maps:get(p2, MP)) == 3),
+        |  
+     2..|      ?assertMatch({ignore_duplicate, _}, add_transaction(1, p1, TD1)),
+        |  
+     2..|      T = #{nonce =&gt; 1, player_id =&gt; p1, game_data =&gt; stuff},
+     2..|      ?assertThrow(_, blocktree:add_new_transaction(T, TD1)),
+        |  
+     2..|      TD1.
+        |  
+        |  add_empty_genesis_test() -&gt;
+     2..|      TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
+     2..|      Block = #{previous_id =&gt; undefined, this_id =&gt; 0, height =&gt; 0, transactions =&gt; []},
+     2..|      TD1 = blocktree:add_new_block(Block, TD),
+        |  
+     2..|      BMP = TD1#tree_data.block_map,
+     2..|      ?assert(maps:size(BMP) == 1),
+     2..|      ?assert(maps:get(0, BMP) == Block),
+        |  
+     2..|      TD1.
+        |  
+        |  map_of_arrays_to_list(Map) -&gt;
+     2..|      M = maps:map(fun (_, A) -&gt; array:to_list(A) end, Map),
+     2..|      maps:fold(fun (_, L, Acc) -&gt; L ++ Acc end, [], M).
+        |  
+        |  add_tr_genesis_test() -&gt;
+     2..|      TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
+     2..|      L = [{2, p1}, {3, p2}, {2, p1}],
+     2..|      TDD = lists:foldl(fun add_mult_trans/2, TD, L),
+        |  
+     2..|      Block = #{previous_id =&gt; undefined, this_id =&gt; 0, height =&gt; 0,
+        |  		   transactions =&gt; map_of_arrays_to_list(TDD#tree_data.transaction_map)},
+        |  		   %% transactions = TD1#tree_data.transaction_map},
+     2..|      TD1 = blocktree:add_new_block(Block, TD),
+        |  
+     2..|      MP = TD1#tree_data.transaction_map,
+     2..|      ?assert(maps:size(MP) == 2),
+     2..|      ?assert(array:size(maps:get(p1, MP)) == 4),
+     2..|      ?assert(array:size(maps:get(p2, MP)) == 3),
+        |  
+     2..|      BMP = TD1#tree_data.block_map,
+     2..|      ?assert(maps:size(BMP) == 1),
+     2..|      ?assert(maps:get(0, BMP) == Block),
+        |  
+     2..|      TD1.
+        |  
+        |  make_block(PrevId, ThisId, Height, TrLs) -&gt;
+     8..|      Fn = fun({N, Id}, Ls) -&gt;
+    26..|  		 T = #{nonce =&gt; N, player_id =&gt; Id},
+    26..|  		 [T | Ls]
+        |  	 end,
+     8..|      Transactions = lists:reverse(lists:foldl(Fn, [], TrLs)),
+        |  
+     8..|      #{previous_id =&gt; PrevId, this_id =&gt; ThisId, height =&gt; Height,
+        |  		   transactions  =&gt;  Transactions}.
+        |  
+        |  add_tr_genesis_2_test() -&gt;
+     2..|      TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
+        |  
+     2..|      Block = make_block(undefined, hi, 0, [{0, p1}, {0, p2}, {1, p1}]),
+        |  
+     2..|      TD1 = blocktree:add_new_block(Block, TD),
+        |  
+     2..|      MP = TD1#tree_data.transaction_map,
+     2..|      ?assert(maps:size(MP) == 2),
+     2..|      ?assert(array:size(maps:get(p1, MP)) == 2),
+     2..|      ?assert(array:size(maps:get(p2, MP)) == 1),
+        |  
+     2..|      BMP = TD1#tree_data.block_map,
+     2..|      ?assert(maps:size(BMP) == 1),
+     2..|      ?assert(maps:get(hi, BMP) == Block),
+        |  
+     2..|      TD1.
+        |  
+        |  mult_blocks_test() -&gt;
+     2..|      TD = #tree_data{},
+        |  
+     2..|      Ba = make_block(undefined, a, 0, [{0, p1}, {0, p2}, {1, p1}]),
+     2..|      Bb = make_block(a, b, 1, [{1, p2}, {2, p1}, {0, p3}]),
+     2..|      Bc = make_block(a, c, 1, [{2, p1}, {1, p2}, {0, p4}, {2, p2}]),
+        |  
+     2..|      Batch = [Ba, Bb, Bc],
+        |  
+     2..|      TD1 = lists:foldl(fun blocktree:add_new_block/2, TD, Batch),
+        |  
+     2..|      MP = TD1#tree_data.transaction_map,
+     2..|      ?assert(maps:size(MP) == 4),
+     2..|      ?assert(array:size(maps:get(p1, MP)) == 3),
+     2..|      ?assert(array:size(maps:get(p2, MP)) == 3),
+     2..|      ?assert(array:size(maps:get(p3, MP)) == 1),
+     2..|      ?assert(array:size(maps:get(p4, MP)) == 1),
+        |  
+     2..|      BMP = TD1#tree_data.block_map,
+     2..|      ?assert(maps:size(BMP) == 3),
+        |  
+     2..|      ?assertEqual(length(blocktree:get_all_longest_branches(TD1)), 2),
+        |  
+     2..|      TD1.
+        |  
+        |  generate_block_gen_test() -&gt;
+     2..|      TD = #tree_data{},
+        |  
+     2..|      L = [{2, p1}, {3, p2}, {2, p1}],
+     2..|      TD1 = lists:foldl(fun add_mult_trans/2, TD, L),
+        |  
+     2..|      B = blocktree:generate_new_block(undefined, TD1),
+        |  
+     2..|      ?assert(length(maps:get(transactions, B)) == 7),
+        |  
+     2..|      B.
+        |  
+        |  
+        |  generate_block_mult_seq_test() -&gt;
+     2..|      TD = #tree_data{},
+        |  
+     2..|      L1 = [{2, p1}, {3, p2}],
+     2..|      L2 = [{1, p1}, {3, p3}, {1, p2}],
+     2..|      L3 = [{1, p2}, {1, p4}],
+        |  
+     2..|      Batch = [L1, L2, L3],
+        |  
+     2..|      Fn = fun (L, TD0) -&gt;
+     6..|  		 Id = maps:size(TD0#tree_data.block_map),
+        |  
+     6..|  		 if
+     2..|  		     Id == 0 -&gt; PrevId = undefined;
+     4..|  		     Id /= 0 -&gt; PrevId = Id - 1
+        |  		 end,
+        |  
+     6..|  		 TD1 = lists:foldl(fun add_mult_trans/2, TD0, L),
+     6..|  		 B = (blocktree:generate_new_block(PrevId, TD1))#{this_id := Id},
+     6..|  		 TD2 = blocktree:add_new_block(B, TD1),
+     6..|  		 TD2
+        |  	 end,
+        |  
+     2..|      TD1 = lists:foldl(Fn, TD, Batch),
+        |  
+     2..|      BMP = TD1#tree_data.block_map,
+     2..|      ?assert(maps:size(BMP) == 3),
+     2..|      ?assert(length(maps:get(transactions, maps:get(0, BMP))) == 5),
+     2..|      ?assert(length(maps:get(transactions, maps:get(1, BMP))) == 5),
+     2..|      ?assert(length(maps:get(transactions, maps:get(2, BMP))) == 2),
+        |  
+     2..|      blocktree:get_block_by_id(0, TD1),
+     2..|      blocktree:get_block_by_id(2, TD1),
+        |  
+     2..|      ?assertError(_, blocktree:get_block_by_id(5, TD1)),
+     2..|      ?assertError(_, blocktree:get_block_by_id(hi, TD1)),
+        |  
+     2..|      ?assertEqual(length(blocktree:get_all_longest_branches(TD1)), 1),
+        |  
+     2..|      TD1.
+        |  
+        |    get_all_longest_branches_test() -&gt;
+     2..|      TD0 = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
+     2..|      Block0 = #{previous_id =&gt; undefined, this_id =&gt; 0, height =&gt; 0, transactions =&gt; []},
+     2..|      Block1 = #{previous_id =&gt; 0, this_id =&gt; 1, height =&gt; 1, transactions =&gt; []},
+     2..|      Block2 = #{previous_id =&gt; 1, this_id =&gt; 2, height =&gt; 2, transactions =&gt; []},
+        |      %% fork from genesis
+     2..|      Block3 = #{previous_id =&gt; 0, this_id =&gt; 3, height =&gt; 1, transactions =&gt; []},
+     2..|      Block4 = #{previous_id =&gt; 1, this_id =&gt; 4, height =&gt; 2, transactions =&gt; []},
+     2..|      TD1 = blocktree:add_new_block(Block0, TD0),
+     2..|      TD2 = blocktree:add_new_block(Block1, TD1),
+     2..|      TD3 = blocktree:add_new_block(Block2, TD2),
+     2..|      TD4 = blocktree:add_new_block(Block3, TD3),
+     2..|      TD5 = blocktree:add_new_block(Block4, TD4),
+     2..|      ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
+     2..|      TD5.
+</pre>
+</body>
+</html>

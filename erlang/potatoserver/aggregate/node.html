@@ -1,0 +1,64 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/cover/aggregate/node.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/lib/potatoserver/ebin/../src/p2p/node.erl by COVER 2018-09-03 at 22:34:20
+
+****************************************************************************
+
+        |  -module(node).
+        |  
+        |  -export([test/1]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  test(Tp) -&gt;
+<font color=red>     0..|      io:fwrite("hello, world\n"),</font>
+<font color=red>     0..|      if Tp == server -&gt;</font>
+<font color=red>     0..|              start_server();</font>
+        |         Tp == client -&gt;
+<font color=red>     0..|              start_client()</font>
+        |      end.
+        |  
+        |  start_client() -&gt;
+<font color=red>     0..|      SomeHostInNet = "localhost", % to make it runnable on one machine</font>
+<font color=red>     0..|      {ok, Sock} = gen_tcp:connect(SomeHostInNet, 5678,</font>
+        |                                   [binary, {active, true}]),
+<font color=red>     0..|      ok = gen_tcp:send(Sock, "Some Data"),</font>
+<font color=red>     0..|      ok = gen_tcp:close(Sock).</font>
+        |  
+        |  start_server() -&gt;
+        |      %% start listening server
+<font color=red>     0..|      {ok, LSock} = gen_tcp:listen(5678, [binary, {active, true}]),</font>
+        |      %% TODO crash if not ok
+<font color=red>     0..|      tcp_listener(LSock).</font>
+        |  
+        |  tcp_listener(LSock) -&gt;
+<font color=red>     0..|      io:fwrite("listening"),</font>
+<font color=red>     0..|      {ok, Sock} = gen_tcp:accept(LSock),</font>
+<font color=red>     0..|      io:fwrite("accetp"),</font>
+        |      %% TODO crash if not ok
+<font color=red>     0..|      spawn(?MODULE, handle, [Sock]),</font>
+        |      %% keep listening
+<font color=red>     0..|      tcp_listener(LSock).</font>
+        |  
+        |  handle(Socket) -&gt;
+<font color=red>     0..|      io:fwrite("handling socket"),</font>
+        |      %% initiate handshake
+        |      %% wait for handshake
+        |      %% go to receive handle
+<font color=red>     0..|      inet:setopts(Socket, [{active, true}]),</font>
+<font color=red>     0..|      receive</font>
+        |          {tcp, Socket, &lt;&lt;"quit", _/binary&gt;&gt;} -&gt;
+<font color=red>     0..|              gen_tcp:close(Socket);</font>
+        |          {tcp, Socket, Msg} -&gt;
+        |              %%gen_tcp:send(Socket, Msg),
+<font color=red>     0..|              io:fwrite(Msg),</font>
+<font color=red>     0..|              handle(Socket)</font>
+        |      end.
+</pre>
+</body>
+</html>

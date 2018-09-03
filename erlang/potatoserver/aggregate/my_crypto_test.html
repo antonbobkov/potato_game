@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/cover/aggregate/my_crypto_test.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/lib/potatoserver/test/my_crypto_test.erl by COVER 2018-09-03 at 22:34:20
+
+****************************************************************************
+
+        |  -module(my_crypto_test).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  
+        |  -import(my_crypto, [hash/1, sign/2, verify/3, read_file_key/2]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  -include_lib("public_key/include/public_key.hrl").
+        |  
+        |  my_crypto_test() -&gt;
+        |      % HASH
+        |  
+     1..|      Message = "hi",
+     1..|      BinMessage = list_to_binary(Message),
+     1..|      MessageHash = my_crypto:hash(BinMessage),
+     1..|      _ = binary_to_list(MessageHash),
+        |      %% io:format("string ~p hash_sz: ~p hash: ~p ~n", [Message, length(L), L]),
+        |  
+        |      % RSA PRIVATE
+     1..|      Key = my_crypto:read_file_key(private, "key1.prv"),
+        |  
+        |      % RSA PUBLIC
+     1..|      PubKey = my_crypto:read_file_key(public, "key1.pub"),
+        |  
+        |      %% io:format("rsa private key ~p~n", [Key]),
+        |  
+     1..|      Signature = my_crypto:sign(MessageHash, Key),
+     1..|      VerifyResult = my_crypto:verify(MessageHash, Signature, PubKey),
+        |  
+     1..|      ?assertEqual(VerifyResult, true, "verify didn't work"),
+        |  
+     1..|      Key2 = my_crypto:read_file_key(private, "key2.prv"),
+     1..|      PubKey2 = my_crypto:read_file_key(public, "key2.pub"),
+        |  
+     1..|      Signature2 = my_crypto:sign(MessageHash, Key2),
+     1..|      ?assertEqual(my_crypto:verify(MessageHash, Signature, PubKey2), false, "verify shouldn't have worked"),
+     1..|      ?assertEqual(my_crypto:verify(MessageHash, Signature2, PubKey), false, "verify shouldn't have worked"),
+        |  
+        |      %% io:format("signature ~p verify ~p ~n", [Signature, VerifyResult]),
+     1..|      [Key, PubKey].
+        |  
+</pre>
+</body>
+</html>

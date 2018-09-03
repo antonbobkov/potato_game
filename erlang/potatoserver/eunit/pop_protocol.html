@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/cover/eunit/pop_protocol.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/erlang/potatoserver/_build/test/lib/potatoserver/ebin/../src/pop_protocol/pop_protocol.erl by COVER 2018-09-03 at 22:34:20
+
+****************************************************************************
+
+        |  -module(pop_protocol).
+        |  
+        |  -export([add_one_block/3, get_genesis_tree_data/1]).
+        |  
+        |  %% -import(blocktree, [add_new_block/2, get_block_by_id/2]).
+        |  %% -import(my_crypto, [hash/1, sign/2, verify/3]).
+        |  %% -import(my_serializer, [serialize_object/1]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  -include("../potato_records.hrl").
+        |  
+        |  map_key_match_assert(Map, KeyList) -&gt;
+     4..|      K1 = lists:sort(maps:keys(Map)),
+     4..|      K2 = lists:sort(KeyList),
+     4..|      ?assertEqual(K1, K2, {"key mismatch", K1, K2}),
+     4..|      ok.
+        |  
+        |  transaction_map_structure_assert(T) when is_map(T) -&gt;
+<font color=red>     0..|      map_key_match_assert(T, [game_data, nonce, player_id, consensus_data]),</font>
+        |      
+<font color=red>     0..|      CD = maps:get(consensus_data, T),</font>
+<font color=red>     0..|      map_key_match_assert(CD, [signature, chain_id]),</font>
+        |      
+<font color=red>     0..|      ok.</font>
+        |  
+        |  check_block_map_structure(B) when is_map(B) -&gt;
+     2..|      map_key_match_assert(B, [previous_id, this_id, height, transactions, consensus_data]),
+        |      
+     2..|      CD = maps:get(consensus_data, B),
+     2..|      map_key_match_assert(CD, [signature, verifier_pub_key, verifier_index, timestamp]),
+        |      
+     2..|      TL = maps:get(transactions, B),
+     2..|      lists:map(fun transaction_map_structure_assert/1, TL),
+        |      
+     2..|      ok.
+        |      
+        |  
+        |  compute_block_hash(Block) when is_map(Block) -&gt;
+     1..|      #{consensus_data := CD} = Block,
+     1..|      CleanBlock = Block#{
+        |  	  this_id := undefined, 
+        |  	  consensus_data := CD#{signature := undefined}
+        |  	 },
+     1..|      my_crypto:hash( my_serializer:serialize_object(CleanBlock) ).
+        |  
+        |  compute_transaction_hash(Transaction) when is_map(Transaction) -&gt;
+<font color=red>     0..|      CD = maps:get(consensus_data, Transaction),</font>
+<font color=red>     0..|      CleanTransaction = Transaction#{</font>
+        |  	  consensus_data := CD#{signature := undefined}
+        |  	 },
+<font color=red>     0..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).</font>
+        |  
+        |  check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) -&gt;
+        |      #{
+        |        consensus_data := CD,
+        |        player_id := PlrKey
+<font color=red>     0..|       } = Transaction,</font>
+        |  
+        |      #{
+        |        signature := PlrSgn,
+        |        chain_id := TrChainId
+<font color=red>     0..|       } = CD,</font>
+        |  
+<font color=red>     0..|      Hash = compute_transaction_hash(Transaction),</font>
+        |  
+        |      %% verify signature's correctness
+<font color=red>     0..|      ?assert(my_crypto:verify(Hash, PlrSgn, PlrKey), "transaction signature failed verification"),</font>
+        |  
+        |      %% compare ChainId
+<font color=red>     0..|      ?assertEqual(TrChainId, ChainId, "bad transaction ChainId"),</font>
+        |  
+<font color=red>     0..|      ok.</font>
+        |      
+        |  
+        |  add_one_block(Block, CurrentTime, ProtocolData)
+        |    when 
+        |        is_record(ProtocolData, protocol_data), 
+        |        is_map(Block)
+        |        -&gt;
+        |  
+     1..|      check_block_map_structure(Block),
+        |  
+        |      #protocol_data{
+        |         verifiers_arr = VerifiersArr, 
+        |         time_between_blocks = TimeBetween, 
+        |         time_desync_margin = TimeDesyncMargin,
+        |         chain_id = MainChainId, 
+        |         tree_data = TD0
+     1..|        } = ProtocolData,
+        |  
+        |      
+        |  
+        |      #{
+        |         previous_id := PrevId, 
+        |         this_id := ThisId, 
+        |         transactions := BlockTransactionsList,
+        |         consensus_data := #{
+        |  			   signature := VerSgn,
+        |  			   verifier_pub_key := VerKey,
+        |  			   verifier_index := VerIndex,
+        |  			   timestamp := Tmp
+        |  			  }
+     1..|        } = Block,
+        |      
+        |      
+        |      %% check that signer is one of the verifiers
+        |      #verifier_public_info{
+        |         index = VerIndexChk, 
+        |         public_key = PubKeyChk
+     1..|        } = array:get(VerIndex, VerifiersArr),
+        |  
+     1..|      ?assertEqual(VerIndex, VerIndexChk, "indices don't match"),
+     1..|      ?assertEqual(VerKey, PubKeyChk, "keys don't match"),
+        |  
+        |  
+        |      %% check that the time is correct for this verifier
+        |      %% (also check that it is not too far into the future)
+        |      %% should be larger, and have the correct remainder
+        |      
+     1..|      PreviousBlock = blocktree:get_block_by_id(PrevId, TD0),
+     1..|      PreviousBlockTimestamp = maps:get(timestamp, maps:get(consensus_data, PreviousBlock)),
+        |  
+     1..|      ?assert(PreviousBlockTimestamp &lt; Tmp, "time should be larger than previous"),
+     1..|      ?assert(Tmp - TimeDesyncMargin &lt; CurrentTime, "block cannot be in the future"),
+        |      
+     1..|      VerNum = array:size(VerifiersArr),
+     1..|      ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
+        |      
+        |      %% check ThisId hash correctness
+     1..|      Hash = ThisId,
+     1..|      ?assertEqual(Hash, compute_block_hash(Block), "incorrect hash"),
+        |  
+        |      %% check signature's correctness
+     1..|      ?assert(my_crypto:verify(Hash, VerSgn, VerKey), "signature failed verification"),
+        |  
+        |      %% (OPTIONAL) check sequence of different verifiers
+        |  
+        |      %% Verify transactions
+     1..|      lists:map(fun(T) -&gt; check_transaction_correctness(T, MainChainId) end, BlockTransactionsList),
+        |  
+        |      %% add this block to tree_data 
+        |      %% this can trigger errors if the block if poorly formed
+        |      %% also fails if block is orphan or already exists
+     1..|      TD1 = blocktree:add_new_block(Block, TD0),
+        |  
+     1..|      NewProtocolData = ProtocolData#protocol_data{tree_data = TD1},
+        |  
+     1..|      NewProtocolData.
+        |  
+        |  get_genesis_tree_data(CurrentTime) -&gt;
+     1..|      TD0 = #tree_data{},
+     1..|      B0 = blocktree:generate_new_block(undefined, TD0),
+     1..|      B1 = B0#{
+        |  	     this_id := genesis,
+        |  	     consensus_data := #{
+        |  				 timestamp =&gt; CurrentTime,
+        |  				 signature =&gt; undefined, 
+        |  				 verifier_pub_key =&gt; undefined, 
+        |  				 verifier_index =&gt; undefined
+        |  				}
+        |  	    },
+     1..|      check_block_map_structure(B1),
+     1..|      TD1 = blocktree:add_new_block(B1, TD0),
+     1..|      TD1.
+</pre>
+</body>
+</html>
