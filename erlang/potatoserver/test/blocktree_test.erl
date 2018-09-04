@@ -1,5 +1,6 @@
 -module(blocktree_test).
--export([blocktree_test/0]).
+
+-include_lib("eunit/include/eunit.hrl").
 
 -include_lib("stdlib/include/assert.hrl").
 
@@ -30,7 +31,7 @@ add_mult_trans({Count, Id}, TD) when Count > 0 ->
     %% io:format("~p ~p ~p ~n", [Id, NextNonce, Msg]),
     add_mult_trans({Count-1, Id}, NewTD).
 
-test_add_new_transaction() ->
+add_new_transaction_test() ->
     TD = #tree_data{transaction_map=maps:new()},
 
     ?assertMatch({ignore_nonce_too_high, _}, add_transaction(1, p1, TD)),
@@ -52,7 +53,7 @@ test_add_new_transaction() ->
 
     TD1.
 
-test_add_empty_genesis() ->
+add_empty_genesis_test() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
     Block = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
     TD1 = blocktree:add_new_block(Block, TD),
@@ -67,7 +68,7 @@ map_of_arrays_to_list(Map) ->
     M = maps:map(fun (_, A) -> array:to_list(A) end, Map),
     maps:fold(fun (_, L, Acc) -> L ++ Acc end, [], M).
 
-test_add_tr_genesis() ->
+add_tr_genesis_test() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
     L = [{2, p1}, {3, p2}, {2, p1}],
     TDD = lists:foldl(fun add_mult_trans/2, TD, L),
@@ -98,7 +99,7 @@ make_block(PrevId, ThisId, Height, TrLs) ->
     #{previous_id => PrevId, this_id => ThisId, height => Height,
 		   transactions  =>  Transactions}.
 
-test_add_tr_genesis_2() ->
+add_tr_genesis_2_test() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
 
     Block = make_block(undefined, hi, 0, [{0, p1}, {0, p2}, {1, p1}]),
@@ -116,7 +117,7 @@ test_add_tr_genesis_2() ->
 
     TD1.
 
-test_mult_blocks() ->
+mult_blocks_test() ->
     TD = #tree_data{},
 
     Ba = make_block(undefined, a, 0, [{0, p1}, {0, p2}, {1, p1}]),
@@ -141,7 +142,7 @@ test_mult_blocks() ->
 
     TD1.
 
-test_generate_block_gen() ->
+generate_block_gen_test() ->
     TD = #tree_data{},
 
     L = [{2, p1}, {3, p2}, {2, p1}],
@@ -154,7 +155,7 @@ test_generate_block_gen() ->
     B.
 
 
-test_generate_block_mult_seq() ->
+generate_block_mult_seq_test() ->
     TD = #tree_data{},
 
     L1 = [{2, p1}, {3, p2}],
@@ -195,7 +196,7 @@ test_generate_block_mult_seq() ->
 
     TD1.
 
-  test_get_all_longest_branches() ->
+  get_all_longest_branches_test() ->
     TD0 = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
     Block0 = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
     Block1 = #{previous_id => 0, this_id => 1, height => 1, transactions => []},
@@ -210,13 +211,3 @@ test_generate_block_mult_seq() ->
     TD5 = blocktree:add_new_block(Block4, TD4),
     ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
     TD5.
-
-blocktree_test() ->
-    test_add_new_transaction(),
-    test_add_empty_genesis(),
-    test_add_tr_genesis(),
-    test_add_tr_genesis_2(),
-    test_mult_blocks(),
-    test_generate_block_gen(),
-    test_generate_block_mult_seq(),
-    test_get_all_longest_branches().

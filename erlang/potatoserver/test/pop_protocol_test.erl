@@ -1,6 +1,6 @@
 -module(pop_protocol_test).
-
--export([pop_protocol_test/0]).
+  
+-include_lib("eunit/include/eunit.hrl").
 
 -import(pop_protocol, [add_one_block/3, get_genesis_tree_data/1]).
 -import(blocktree, [add_new_block/2, get_block_by_id/2]).

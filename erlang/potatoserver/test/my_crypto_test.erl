@@ -1,6 +1,6 @@
 -module(my_crypto_test).
 
--export([my_crypto_test/0]).
+-include_lib("eunit/include/eunit.hrl").
 
 -import(my_crypto, [hash/1, sign/2, verify/3, read_file_key/2]).
 
@@ -38,3 +38,4 @@ my_crypto_test() ->
 
     %% io:format("signature ~p verify ~p ~n", [Signature, VerifyResult]),
     [Key, PubKey].
+
