@@ -2,19 +2,14 @@
   
 -include_lib("eunit/include/eunit.hrl").
 
--import(pop_protocol, [add_one_block/3, get_genesis_tree_data/1]).
--import(blocktree, [add_new_block/2, get_block_by_id/2]).
--import(my_crypto, [hash/1, sign/2, verify/3, read_file_key/2]).
--import(my_serializer, [serialize_object/1]).
-
 -include_lib("stdlib/include/assert.hrl").
 
 -include("../src/potato_records.hrl").
 
-make_block(PrevId, PrivateKey, PublicKey, Index, Time) ->
+make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time) ->
     Block0 = #{
        previous_id => PrevId,
-       height => 1,
+       height => Height,
        this_id => undefined,
        transactions => [],
        consensus_data => #{
@@ -37,7 +32,7 @@ make_block(PrevId, PrivateKey, PublicKey, Index, Time) ->
 
 
 
-pop_protocol_test() ->
+add_new_block_test() ->
     %% make verifier array, they share keys
     PrivateKey = my_crypto:read_file_key(private, "key1.prv"),
     PublicKey = my_crypto:read_file_key(public, "key1.pub"),
@@ -54,7 +49,33 @@ pop_protocol_test() ->
 	    tree_data = pop_protocol:get_genesis_tree_data(CurrentTime)
 	   },
 
-    Block = make_block(genesis, PrivateKey, PublicKey, 1, 110),
+    B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
+    B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
+    B3 = make_block(maps:get(this_id, B1), 2, PrivateKey, PublicKey, 2, 120),
+    B4 = make_block(maps:get(this_id, B2), 2, PrivateKey, PublicKey, 3, 130),
+    B5 = make_block(maps:get(this_id, B4), 3, PrivateKey, PublicKey, 4, 140),
 
-    pop_protocol:add_one_block(Block, 115, PD0),
+    FoldFn = fun(Block, PD) -> 
+		     CD = maps:get(consensus_data, Block),
+		     T = maps:get(timestamp, CD),
+		     pop_protocol:add_new_block(Block, T + 1, PD) 
+	     end,
+
+    lists:foldl(FoldFn, PD0, [B1]),
+    lists:foldl(FoldFn, PD0, [B1, B3]),
+    lists:foldl(FoldFn, PD0, [B1, B2, B3, B4, B5]),
+    lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
+
+    ?assertError(_, lists:foldl(FoldFn, PD0, [B3])),
+    ?assertError(_, lists:foldl(FoldFn, PD0, [B2, B5])),
+    ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1])),
+
+    E1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 120),
+    E2 = make_block(genesis, 2, PrivateKey, PublicKey, 1, 110),
+    E3 = make_block(maps:get(this_id, B1), 1, PrivateKey, PublicKey, 2, 120),
+
+    ?assertError(_, lists:foldl(FoldFn, PD0, [E1])),
+    ?assertError(_, lists:foldl(FoldFn, PD0, [E2])),
+    ?assertError(_, lists:foldl(FoldFn, PD0, [B1, E3])),
+
     ok.

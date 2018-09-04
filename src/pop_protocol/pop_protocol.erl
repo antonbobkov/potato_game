@@ -1,10 +1,6 @@
 -module(pop_protocol).
 
--export([add_one_block/3, get_genesis_tree_data/1]).
-
-%% -import(blocktree, [add_new_block/2, get_block_by_id/2]).
-%% -import(my_crypto, [hash/1, sign/2, verify/3]).
-%% -import(my_serializer, [serialize_object/1]).
+-export([add_new_block/3, get_genesis_tree_data/1]).
 
 -include_lib("stdlib/include/assert.hrl").
 
@@ -73,7 +69,7 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
     ok.
     
 
-add_one_block(Block, CurrentTime, ProtocolData)
+add_new_block(Block, CurrentTime, ProtocolData)
   when 
       is_record(ProtocolData, protocol_data), 
       is_map(Block)
