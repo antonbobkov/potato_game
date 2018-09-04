@@ -209,5 +209,13 @@ generate_block_mult_seq_test() ->
     TD3 = blocktree:add_new_block(Block2, TD2),
     TD4 = blocktree:add_new_block(Block3, TD3),
     TD5 = blocktree:add_new_block(Block4, TD4),
+
     ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
+
+    
+    ?assertEqual(length(blocktree:get_children_block_list(0, TD5)), 2),
+    ?assertEqual(length(blocktree:get_children_block_list(0, TD3)), 1),
+    ?assertEqual(length(blocktree:get_children_block_list(1, TD5)), 2),
+    ?assertEqual(length(blocktree:get_children_block_list(2, TD5)), 0),
+
     TD5.
