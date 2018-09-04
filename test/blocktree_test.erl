@@ -219,3 +219,7 @@ generate_block_mult_seq_test() ->
     ?assertEqual(length(blocktree:get_children_block_list(2, TD5)), 0),
 
     TD5.
+
+%% Lists search is not defined for our version of erlang ಠ_ಠ
+%% lists_search_test() ->
+%%     lists:search(fun(_) -> true end, []).

@@ -119,6 +119,12 @@ add_new_block(Block, CurrentTime, ProtocolData)
 
     ?assert(PreviousBlockTimestamp < Tmp, "time should be larger than previous"),
     ?assert(Tmp - TimeDesyncMargin < CurrentTime, "block cannot be in the future"),
+
+    %% Check that this verifier hasn't already submitted a block here
+    ChildList = blocktree:get_children_block_list(PrevId, TD0),
+    IndexFn = fun(B) -> maps:get(verifier_index, maps:get(consensus_data, B)) end,
+    VerIndexList = lists:map(IndexFn, ChildList),
+    ?assertEqual(lists:member(VerIndex, VerIndexList), false),
     
     VerNum = array:size(VerifiersArr),
     ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
@@ -159,3 +165,5 @@ get_genesis_tree_data(CurrentTime) ->
     check_block_map_structure(B1),
     TD1 = blocktree:add_new_block(B1, TD0),
     TD1.
+
+    
