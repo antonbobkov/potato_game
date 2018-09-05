@@ -1,10 +1,6 @@
 -module(pop_protocol).
 
--export([add_one_block/3, get_genesis_tree_data/1]).
-
-%% -import(blocktree, [add_new_block/2, get_block_by_id/2]).
-%% -import(my_crypto, [hash/1, sign/2, verify/3]).
-%% -import(my_serializer, [serialize_object/1]).
+-export([add_new_block/3, get_genesis_tree_data/1]).
 
 -include_lib("stdlib/include/assert.hrl").
 
@@ -73,7 +69,7 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
     ok.
     
 
-add_one_block(Block, CurrentTime, ProtocolData)
+add_new_block(Block, CurrentTime, ProtocolData)
   when 
       is_record(ProtocolData, protocol_data), 
       is_map(Block)
@@ -123,6 +119,12 @@ add_one_block(Block, CurrentTime, ProtocolData)
 
     ?assert(PreviousBlockTimestamp < Tmp, "time should be larger than previous"),
     ?assert(Tmp - TimeDesyncMargin < CurrentTime, "block cannot be in the future"),
+
+    %% Check that this verifier hasn't already submitted a block here
+    ChildList = blocktree:get_children_block_list(PrevId, TD0),
+    IndexFn = fun(B) -> maps:get(verifier_index, maps:get(consensus_data, B)) end,
+    VerIndexList = lists:map(IndexFn, ChildList),
+    ?assertEqual(lists:member(VerIndex, VerIndexList), false),
     
     VerNum = array:size(VerifiersArr),
     ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
@@ -163,3 +165,5 @@ get_genesis_tree_data(CurrentTime) ->
     check_block_map_structure(B1),
     TD1 = blocktree:add_new_block(B1, TD0),
     TD1.
+
+    

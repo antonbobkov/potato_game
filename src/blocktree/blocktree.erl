@@ -5,7 +5,8 @@
 	 add_new_block/2,
 	 generate_new_block/2,
 	 get_block_by_id/2,
-	 get_all_longest_branches/1
+	 get_all_longest_branches/1,
+	 get_children_block_list/2
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
@@ -272,3 +273,9 @@ get_all_longest_branches(TreeData)
     MaxHt = maps:fold(MaxHtFn, 0, BlockMap),
     MaxHtList = maps:values(maps:filter(fun(_, V) -> maps:get(height, V) == MaxHt end, BlockMap)),
     MaxHtList.
+
+get_children_block_list(PrevId, TreeData)
+  when is_record(TreeData, tree_data) ->
+    #tree_data{block_map = BlockMap} = TreeData,
+    maps:values(maps:filter(fun(_, B) -> maps:get(previous_id, B) == PrevId end, BlockMap)).
+    
