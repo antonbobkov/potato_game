@@ -174,7 +174,7 @@ resolve_fork(B1, B2, TreeData)
   when 
       is_map(B1),
       is_map(B2),
-      is_map(TreeData) ->
+      is_record(TreeData, tree_data) ->
 
     H1 = maps:get(height, B1),
     H2 = maps:get(height, B2),
