@@ -1,6 +1,6 @@
 -module(node).
 
--export([test/1]).
+-export([test/1, handle/1]).
 
 -include_lib("stdlib/include/assert.hrl").
 
