@@ -32,7 +32,7 @@ make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time) ->
 
 
 
-add_new_block_test() ->
+basic_test() ->
     %% make verifier array, they share keys
     PrivateKey = my_crypto:read_file_key(private, "key1.prv"),
     PublicKey = my_crypto:read_file_key(public, "key1.pub"),
@@ -64,7 +64,13 @@ add_new_block_test() ->
     lists:foldl(FoldFn, PD0, [B1]),
     lists:foldl(FoldFn, PD0, [B1, B3]),
     lists:foldl(FoldFn, PD0, [B1, B2, B3, B4, B5]),
-    lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
+    PD1 = lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
+
+    TD = PD1#protocol_data.tree_data,
+
+    ?assertEqual(pop_protocol:resolve_fork(B4, B5, TD), B5),
+    ?assertEqual(pop_protocol:resolve_fork(B1, B2, TD), B1),
+    ?assertEqual(pop_protocol:resolve_fork(B3, B4, TD), B3),
 
     ?assertError(_, lists:foldl(FoldFn, PD0, [B3])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B2, B5])),

@@ -1,6 +1,10 @@
 -module(pop_protocol).
 
--export([add_new_block/3, get_genesis_tree_data/1]).
+-export([
+	 add_new_block/3, 
+	 get_genesis_tree_data/1,
+	 resolve_fork/3
+	]).
 
 -include_lib("stdlib/include/assert.hrl").
 
@@ -166,4 +170,55 @@ get_genesis_tree_data(CurrentTime) ->
     TD1 = blocktree:add_new_block(B1, TD0),
     TD1.
 
+resolve_fork(B1, B2, TreeData)
+  when 
+      is_map(B1),
+      is_map(B2),
+      is_record(TreeData, tree_data) ->
+
+    H1 = maps:get(height, B1),
+    H2 = maps:get(height, B2),
+
+    if 
+	H1 > H2 -> 
+	    B1;
+
+	H2 > H1 -> 
+	    B2;
+
+	H2 == H1 -> 
+	    Branch = resolve_fork_select_branch(B1, B2, TreeData),
+	    if 
+		Branch == first ->
+		    B1;
+		Branch == second ->
+		    B2
+	    end
+	end.
+
+resolve_fork_select_branch(B1, B2, TreeData) ->
+    Id1 = maps:get(previous_id, B1),
+    Id2 = maps:get(previous_id, B2),
     
+    if 
+	Id1 == Id2 ->
+	    resolve_fork_same_parent(B1, B2);
+	Id1 /= Id2 ->
+	    BB1 = blocktree:get_block_by_id(Id1, TreeData),
+	    BB2 = blocktree:get_block_by_id(Id2, TreeData),
+	    resolve_fork_select_branch(BB1, BB2, TreeData)
+    end.
+
+resolve_fork_same_parent(B1, B2) ->
+    CD1 = maps:get(consensus_data, B1),
+    CD2 = maps:get(consensus_data, B2),
+
+    T1 = maps:get(timestamp, CD1),
+    T2 = maps:get(timestamp, CD2),
+
+    if 
+	T1 < T2 ->
+	    first;
+	T2 < T1 ->
+	    second
+    end.
