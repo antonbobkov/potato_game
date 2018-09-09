@@ -17,18 +17,18 @@ map_key_match_assert(Map, KeyList) ->
     ok.
 
 transaction_map_structure_assert(T) when is_map(T) ->
-    map_key_match_assert(T, [game_data, nonce, player_id, consensus_data]),
+    map_key_match_assert(T, ?transaction),
     
     CD = maps:get(consensus_data, T),
-    map_key_match_assert(CD, [signature, chain_id]),
+    map_key_match_assert(CD, ?consensus_transaction_data),
     
     ok.
 
 check_block_map_structure(B) when is_map(B) ->
-    map_key_match_assert(B, [previous_id, this_id, height, transactions, consensus_data]),
+    map_key_match_assert(B, ?block),
     
     CD = maps:get(consensus_data, B),
-    map_key_match_assert(CD, [signature, verifier_pub_key, verifier_index, timestamp]),
+    map_key_match_assert(CD, ?consensus_block_data),
     
     TL = maps:get(transactions, B),
     lists:map(fun transaction_map_structure_assert/1, TL),

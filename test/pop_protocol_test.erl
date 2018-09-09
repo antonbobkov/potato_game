@@ -6,12 +6,34 @@
 
 -include("../src/potato_records.hrl").
 
+make_transaction(PrivateKey, PublicKey, Nonce, ChainId) ->
+    T0 = #{
+	   game_data => undefined,
+	   nonce => Nonce,
+	   player_id => PublicKey,
+	   consensus_data => #{
+			       signature => undefined,
+			       chain_id => ChainId
+			      }
+	  },
+    Hash = my_crypto:hash(my_serializer:serialize_object(T0)),
+    Signature = my_crypto:sign(Hash, PrivateKey),
+    CD = maps:get(consensus_data, T0),
+    T1 = T0#{
+	     consensus_data := CD#{signature := Signature}
+	    },
+
+    T1.
+
 make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time) ->
+    make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time, []).
+
+make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time, Transactions) ->
     Block0 = #{
        previous_id => PrevId,
        height => Height,
        this_id => undefined,
-       transactions => [],
+       transactions => Transactions,
        consensus_data => #{
 			   signature => undefined,
 			   verifier_pub_key => PublicKey,
@@ -72,6 +94,7 @@ basic_test() ->
     ?assertEqual(pop_protocol:resolve_fork(B1, B2, TD), B1),
     ?assertEqual(pop_protocol:resolve_fork(B3, B4, TD), B3),
 
+
     ?assertError(_, lists:foldl(FoldFn, PD0, [B3])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B2, B5])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1])),
@@ -83,5 +106,10 @@ basic_test() ->
     ?assertError(_, lists:foldl(FoldFn, PD0, [E1])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [E2])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B1, E3])),
+
+    %% Error for when same verifier adds two different blocks
+    T = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
+    B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
+    ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1T])), 
 
     ok.
