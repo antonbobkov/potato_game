@@ -1,0 +1,3 @@
+[submodule "elixir_libs/ethereumex"]
+	path = elixir_libs/ethereumex
+	url = https://github.com/exthereum/ethereumex.git
