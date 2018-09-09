@@ -8,7 +8,7 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
--include("../potato_records.hrl").
+-include("potato_records.hrl").
 
 map_key_match_assert(Map, KeyList) ->
     K1 = lists:sort(maps:keys(Map)),

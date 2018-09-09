@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,potatoserver}.
+{modules,[blocktree,farmer_server,my_crypto,my_serializer,node,plantation,
+          pop_protocol,potatoserver_app,potatoserver_sup,web3]}.

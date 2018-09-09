@@ -2,9 +2,6 @@
 
 -export([hash/1, sign/2, verify/3, read_file_key/2]).
 
-%% -include_lib("stdlib/include/assert.hrl").
-%% -include_lib("public_key/include/public_key.hrl"). 
-
 hash(Bin) -> crypto:hash(sha256, Bin).
 
 sign(Hash, Key) -> public_key:sign(Hash, none, Key).
