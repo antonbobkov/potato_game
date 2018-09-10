@@ -3,7 +3,7 @@
 ## Proof-of-Potato
 
 Proof-of-Potato (PoP) is a protocol for running decentralized sharded off-chain state machines.
-PoP is managed by a potato smart contract hosted on a secure blockchain such as Ethereum.
+PoP is managed by a potato smart contract hosted on either a permissionless blockchain like Ethereum or a trusted private or permissioned server.
 The potato smart contract manages potato shard ownership and list of potato verifiers.
 Each potato shard runs a blockchain based potato state machine using our novel Proof-of-Tater (PoT) potato consensus algorithm.
 Other potato consensus protocols are possible too.
@@ -45,12 +45,9 @@ Potato Shards are operated by potato verifiers assigned by the potato contract.
 **State machine restrictions**:
  The current potato implementation of PoT expects a blockchain based potato state machine.
  Each potato block contains a list of explicit potato state transitions
- (i.e. potato transactions or potato game actions)
- and the potato block itself indicates the potato state of all its potat state transitions applied to the previous potato block in order.
- There may also be an implicit potato state update at the end of the potato block (e.g. coinbase transaction, world update).
- The potato block can optionally store potato state hash in a potato merkle tree
- <potato tree?, it's a little different because we only need to store some of the state>
- which is needed for cross-potato shard transactions.
+ (i.e. potato transactions or potato game actions). There may also be an implicit potato state update at the end of the potato block (e.g. potato verifier rewards or world update).
+ The potato state machine state can be built by applying all transactions in all blocks in order.
+ The potato block can optionally store potato state hash in a potato merkle tree which is needed for cross-potato shard transactions.
 
 **Cross-potato shard transactions**
 <TODO incorporate doc> https://docs.google.com/document/d/1RCwBOfJ023zHt-6VK8SEWGf9OAX4N7hroeAZKDRL3_0/
@@ -65,7 +62,7 @@ Potato Game is the Proof-of-Potato flagship game.
 ### Terminology
 
 **The Potato Plantation**:
- The official Potato plantation that will host Potato Game officially!
+ The official potato game potato contract hosted on its potato main chain (likely Ethereum).
 **Potatoes**:
  potato verifiers earn potatoes as they tend to the potato shards they are assigned to.
  Potatoes can be withdrawn with a cross-potato shard transaction between the ptotao shard and the potato main chain
