@@ -11,7 +11,7 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
--include("../potato_records.hrl").
+-include("potato_records.hrl").
 
 
 add_new_transaction_to_array(Transaction, TransactionArray)
@@ -54,6 +54,17 @@ add_new_transaction_to_map(Transaction, TransactionMap)
     {Msg, NewTA} = add_new_transaction_to_array(Transaction, TransactionArray),
     NewTM = maps:put(Id, NewTA, TM),
     {Msg, NewTM}.
+
+%% @doc
+%% Adds new block.
+%% Fails if can't find previous block.
+%% Fails if height is incorrect.
+%% Fails if transactions list is incorrect:
+%% Nonces in each list should be in order
+%% First nonce in a list should come after the last nonce in the chain for that player
+%% Fails if this_id is not unique.
+
+%% Note: genesis block will have previous_id=undefined and height=0
 
 add_new_transaction(Transaction, TreeData)
   when is_map(Transaction),
