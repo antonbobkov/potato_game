@@ -14,9 +14,8 @@
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_new_block-2">add_new_block/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#add_new_transaction-2">add_new_transaction/2</a></td><td>
-  Adds new block.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_new_block-2">add_new_block/2</a></td><td>Adds a new block to the blocktree.</td></tr>
+<tr><td valign="top"><a href="#add_new_transaction-2">add_new_transaction/2</a></td><td>Adds a new transaction to transaction list.</td></tr>
 <tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_all_longest_branches-1">get_all_longest_branches/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_block_by_id-2">get_block_by_id/2</a></td><td></td></tr>
@@ -28,19 +27,35 @@
 <h3 class="function"><a name="add_new_block-2">add_new_block/2</a></h3>
 <div class="spec">
 <p><tt>add_new_block(Block, TreeData) -&gt; any()</tt></p>
-</div>
+</div><p><p>Adds a new block to the blocktree.</p>
+ 
+  <p>If successful, it returns updated TreeData.</p>
+ 
+  <p>Fails if:</p>
+ 
+  <ul>
+  <li> can't find previous block</li>
+  <li> this_id is not unique </li>
+  <li> height is incorrect</li>
+  <li> transactions list is incorrect:
+    <ul>
+      <li> Nonces in each list should be in order</li>
+      <li> First nonce in a list should come after the last nonce in the chain for that player</li>
+    </ul>
+  </li>
+  </ul>
+ 
+  Note: genesis block will have previous_id=undefined and height=0</p>
 
 <h3 class="function"><a name="add_new_transaction-2">add_new_transaction/2</a></h3>
 <div class="spec">
 <p><tt>add_new_transaction(Transaction, TreeData) -&gt; any()</tt></p>
-</div><p>
-  Adds new block.
-  Fails if can't find previous block.
-  Fails if height is incorrect.
-  Fails if transactions list is incorrect:
-  Nonces in each list should be in order
-  First nonce in a list should come after the last nonce in the chain for that player
-  Fails if this_id is not unique.</p>
+</div><p><p>Adds a new transaction to transaction list.</p>
+ 
+  Can only do so in order.
+  High nonce, and duplicate transactions are ignored.
+  Fails with error if there is a different transaction with the same nonce.
+  This function will be called indirectly from add_new_block</p>
 
 <h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
 <div class="spec">
