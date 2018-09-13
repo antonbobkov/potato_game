@@ -14,6 +14,7 @@
 -include("potato_records.hrl").
 
 
+
 add_new_transaction_to_array(Transaction, TransactionArray)
   when is_map(Transaction) ->
 
@@ -55,16 +56,12 @@ add_new_transaction_to_map(Transaction, TransactionMap)
     NewTM = maps:put(Id, NewTA, TM),
     {Msg, NewTM}.
 
-%% @doc
-%% Adds new block.
-%% Fails if can't find previous block.
-%% Fails if height is incorrect.
-%% Fails if transactions list is incorrect:
-%% Nonces in each list should be in order
-%% First nonce in a list should come after the last nonce in the chain for that player
-%% Fails if this_id is not unique.
-
-%% Note: genesis block will have previous_id=undefined and height=0
+%% @doc Adds a new transaction to transaction list.
+%% 
+%% Can only do so in order.
+%% High nonce, and duplicate transactions are ignored.
+%% Fails with error if there is a different transaction with the same nonce.
+%% This function will be called indirectly from add_new_block
 
 add_new_transaction(Transaction, TreeData)
   when is_map(Transaction),
@@ -156,6 +153,26 @@ transaction_map_from_list(T, Map) ->
 	    NewList = [T]
     end,
     maps:put(Id, NewList, Map).
+
+%% @doc Adds a new block to the blocktree.
+%% 
+%% If successful, it returns updated TreeData.
+%% 
+%% Fails if:
+%% 
+%% <ul>
+%% <li> can't find previous block</li>
+%% <li> this_id is not unique </li>
+%% <li> height is incorrect</li>
+%% <li> transactions list is incorrect:
+%%   <ul>
+%%     <li> Nonces in each list should be in order</li>
+%%     <li> First nonce in a list should come after the last nonce in the chain for that player</li>
+%%   </ul>
+%% </li>
+%% </ul>
+%% 
+%% Note: genesis block will have previous_id=undefined and height=0
 
 
 add_new_block(Block, TreeData)
