@@ -14,6 +14,7 @@
 -include("potato_records.hrl").
 
 
+
 add_new_transaction_to_array(Transaction, TransactionArray)
   when is_map(Transaction) ->
 
