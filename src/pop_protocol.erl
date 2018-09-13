@@ -2,7 +2,7 @@
 
 -export([
 	 add_new_block/3, 
-	 get_genesis_tree_data/1,
+	 initialize_protocol_data/5,
 	 resolve_fork/3
 	]).
 
@@ -150,11 +150,17 @@ add_new_block(Block, CurrentTime, ProtocolData)
     %% also fails if block is orphan or already exists
     TD1 = blocktree:add_new_block(Block, TD0),
 
-    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1},
+    %% current last block keeps track of the last block in the chain
+    %% update it, if new block is the last one
+
+    CurrentLastBlock = ProtocolData#protocol_data.last_block,
+    LastBlock = resolve_fork(Block, CurrentLastBlock, TD1),
+
+    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1, last_block = LastBlock},
 
     NewProtocolData.
 
-get_genesis_tree_data(CurrentTime) ->
+initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
     TD0 = #tree_data{},
     B0 = blocktree:generate_new_block(undefined, TD0),
     B1 = B0#{
@@ -168,7 +174,16 @@ get_genesis_tree_data(CurrentTime) ->
 	    },
     check_block_map_structure(B1),
     TD1 = blocktree:add_new_block(B1, TD0),
-    TD1.
+
+    PD = #protocol_data{
+	    verifiers_arr = VerifierArr,
+	    time_between_blocks = TimeBetweenBlocks,
+	    time_desync_margin = TimeDesyncMargin,
+	     chain_id = ChainId,
+	    tree_data = TD1,
+	    last_block = B1
+	   },
+    PD.
 
 resolve_fork(B1, B2, TreeData)
   when 

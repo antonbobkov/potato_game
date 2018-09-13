@@ -63,13 +63,7 @@ basic_test() ->
 
     CurrentTime = 100,
 
-    PD0 = #protocol_data{
-	    verifiers_arr = VerifierArr,
-	    time_between_blocks = 10,
-	    time_desync_margin = 5,
-	    chain_id = hype_chain,
-	    tree_data = pop_protocol:get_genesis_tree_data(CurrentTime)
-	   },
+    PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
     B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
     B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
@@ -88,11 +82,13 @@ basic_test() ->
     lists:foldl(FoldFn, PD0, [B1, B2, B3, B4, B5]),
     PD1 = lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
 
+    ?assert(PD1#protocol_data.last_block == B5),
+
     TD = PD1#protocol_data.tree_data,
 
-    ?assertEqual(pop_protocol:resolve_fork(B4, B5, TD), B5),
-    ?assertEqual(pop_protocol:resolve_fork(B1, B2, TD), B1),
-    ?assertEqual(pop_protocol:resolve_fork(B3, B4, TD), B3),
+    ?assert(pop_protocol:resolve_fork(B4, B5, TD) == B5),
+    ?assert(pop_protocol:resolve_fork(B1, B2, TD) == B1),
+    ?assert(pop_protocol:resolve_fork(B3, B4, TD) == B3),
 
 
     ?assertError(_, lists:foldl(FoldFn, PD0, [B3])),
