@@ -1,7 +1,7 @@
 -record(tree_data, {transaction_map=maps:new(), block_map=maps:new()}).
 
 -record(verifier_public_info, {index, public_key, network_data}).
--record(protocol_data, {verifiers_arr, time_between_blocks, time_desync_margin, chain_id, tree_data}).
+-record(protocol_data, {verifiers_arr, time_between_blocks, time_desync_margin, chain_id, tree_data, last_block}).
 
 
 %% These are handled by maps rather than records
