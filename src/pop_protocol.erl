@@ -169,6 +169,9 @@ add_new_block(Block, CurrentTime, ProtocolData)
 %% Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.
 
 initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
+
+    ?assert(CurrentTime >= 0),
+
     TD0 = #tree_data{},
     B0 = blocktree:generate_new_block(undefined, TD0),
     B1 = B0#{
@@ -260,15 +263,13 @@ get_verfier_next_block_time(PD, VerifierIndex)
     VerNum = array:size(VerifierArr),
     
     LastTime = get_block_cd(timestamp, LastBlock),
-    LastIndex = get_block_cd(verifier_index, LastBlock),
+    LastZeroTime = LastTime - (LastTime rem (VerNum * TimeBetweenBlocks)),
+    NextTime = LastZeroTime + VerifierIndex * TimeBetweenBlocks,
 
     if 
-	VerifierIndex =< LastIndex ->
-	    VerifierIndexMod = VerifierIndex + VerNum;
-	true ->
-	    VerifierIndexMod = VerifierIndex
-    end,
-    
-    NextTime = LastTime + TimeBetweenBlocks * (VerifierIndexMod - LastIndex),
-    NextTime.
+	NextTime =< LastTime ->
+	    NextTime + VerNum * TimeBetweenBlocks;
+	NextTime > LastTime ->
+	    NextTime
+    end.
     

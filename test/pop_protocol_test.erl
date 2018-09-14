@@ -65,6 +65,9 @@ basic_test() ->
 
     PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 0), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 1), 110),
+
     B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
     B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
     B3 = make_block(maps:get(this_id, B1), 2, PrivateKey, PublicKey, 2, 120),
@@ -84,9 +87,9 @@ basic_test() ->
 
     ?assert(PD1#protocol_data.last_block == B5),
 
-    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 0) == 150),
-    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 2) == 170),
-    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 4) == 190),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 0), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 2), 170),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 4), 190),
 
     TD = PD1#protocol_data.tree_data,
 
