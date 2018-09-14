@@ -4,8 +4,8 @@
 -include_lib("stdlib/include/assert.hrl").
 
 web3_test() ->
-  {ok, Pid} = gen_server:start_link(web3, [], []),
-  ?debugFmt("~p~n",[Pid]),
+  {ok, Pid} = gen_server:start(web3, [], []),
+  ?debugFmt("started web3 gen_server ~p~n",[Pid]),
   N1 = gen_server:call(Pid, []),
   ?assertEqual(-1, N1),
 
@@ -14,4 +14,6 @@ web3_test() ->
   N2 = gen_server:call(Pid, []),
   ?assertEqual(113, N2),
 
-  gen_server:cast(Pid, stop).
+  gen_server:cast(Pid, stop),
+  % give time for server to stop
+  timer:sleep(200).
