@@ -37,7 +37,7 @@ check_block_map_structure(B) when is_map(B) ->
     ok.
     
 %% get entry in block's consensus data
-get_block_cd(Entry, Block) -> maps:get(Entry, maps:get(consensus_block_data, Block)).
+get_block_cd(Entry, Block) -> maps:get(Entry, maps:get(consensus_data, Block)).
 
 compute_block_hash(Block) when is_map(Block) ->
     #{consensus_data := CD} = Block,

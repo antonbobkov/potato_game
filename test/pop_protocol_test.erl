@@ -84,6 +84,10 @@ basic_test() ->
 
     ?assert(PD1#protocol_data.last_block == B5),
 
+    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 0) == 150),
+    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 2) == 170),
+    ?assert(pop_protocol:get_verfier_next_block_time(PD1, 4) == 190),
+
     TD = PD1#protocol_data.tree_data,
 
     ?assert(pop_protocol:resolve_fork(B4, B5, TD) == B5),
