@@ -3,7 +3,8 @@
 -export([
 	 add_new_block/3, 
 	 initialize_protocol_data/5,
-	 resolve_fork/3
+	 resolve_fork/3,
+	 get_verfier_next_block_time/2
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
@@ -35,6 +36,8 @@ check_block_map_structure(B) when is_map(B) ->
     
     ok.
     
+%% get entry in block's consensus data
+get_block_cd(Entry, Block) -> maps:get(Entry, maps:get(consensus_block_data, Block)).
 
 compute_block_hash(Block) when is_map(Block) ->
     #{consensus_data := CD} = Block,
@@ -160,6 +163,11 @@ add_new_block(Block, CurrentTime, ProtocolData)
 
     NewProtocolData.
 
+%% @doc Initialize protocol data.
+%% 
+%% Creates a tree with genesis block with a fixed timestamp.
+%% Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.
+
 initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
     TD0 = #tree_data{},
     B0 = blocktree:generate_new_block(undefined, TD0),
@@ -237,3 +245,30 @@ resolve_fork_same_parent(B1, B2) ->
 	T2 < T1 ->
 	    second
     end.
+
+%% @doc Get the next appropriate time for a verifier to make a block.
+
+get_verfier_next_block_time(PD, VerifierIndex) 
+  when is_record(PD, protocol_data) ->
+
+    #protocol_data{
+	    verifiers_arr = VerifierArr,
+	    time_between_blocks = TimeBetweenBlocks,
+	    last_block = LastBlock
+      } = PD,
+
+    VerNum = array:size(VerifierArr),
+    
+    LastTime = get_block_cd(timestamp, LastBlock),
+    LastIndex = get_block_cd(verifier_index, LastBlock),
+
+    if 
+	VerifierIndex =< LastIndex ->
+	    VerifierIndexMod = VerifierIndex + VerNum;
+	true ->
+	    VerifierIndexMod = VerifierIndex
+    end,
+    
+    NextTime = LastTime + TimeBetweenBlocks * (VerifierIndexMod - LastIndex),
+    NextTime.
+    
