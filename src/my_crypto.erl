@@ -4,17 +4,19 @@
 
 hash(Bin) -> crypto:hash(sha256, Bin).
 
-sign(Hash, PrivateKey) -> public_key:sign(Hash, none, PrivateKey).
-verify(Hash, Signature, PubKey) -> public_key:verify(Hash, none, Signature, PubKey).
+sign(_Hash, _PrivateKey) -> sign. %%public_key:sign(Hash, none, PrivateKey).
+verify(_Hash, _Signature, _PubKey) -> true. %%public_key:verify(Hash, none, Signature, PubKey).
     
 
 read_file_key(private, FileName) ->
     {ok, PemBin} = file:read_file(FileName),
     [RSAEntry] = public_key:pem_decode(PemBin),
-    Key = public_key:pem_entry_decode(RSAEntry),
-    Key;
+    _Key = public_key:pem_entry_decode(RSAEntry),
+    %% Key;
+    FileName;
 
 read_file_key(public, FileName) ->
     {ok, Bin} = file:read_file(FileName),
-    [{Key, _}] = public_key:ssh_decode(Bin, public_key),
-    Key.  
+    [{_Key, _}] = public_key:ssh_decode(Bin, public_key),
+    %% Key;
+    FileName.

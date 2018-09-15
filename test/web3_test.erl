@@ -5,7 +5,7 @@
 
 web3_test() ->
   {ok, Pid} = gen_server:start_link(web3, [], []),
-  ?debugFmt("~p~n",[Pid]),
+  %% ?debugFmt("~p~n",[Pid]),
   N1 = gen_server:call(Pid, []),
   ?assertEqual(-1, N1),
 

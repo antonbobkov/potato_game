@@ -14,6 +14,7 @@
 	 apply_transaction_signature/2
 	]).
 
+-include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 -include("potato_records.hrl").
@@ -67,7 +68,7 @@ compute_transaction_hash(Transaction) when is_map(Transaction) ->
 
 apply_block_signature(Signature, Block) 
   when is_map(Block) ->
-    Hash = maps:get(this_is, Block),
+    Hash = maps:get(this_id, Block),
     PubKey = get_block_cd(verifier_pub_key, Block),
 
     ?assertEqual(Hash, compute_block_hash(Block)),
@@ -171,6 +172,13 @@ add_new_block(Block, CurrentTime, ProtocolData)
     ChildList = blocktree:get_children_block_list(PrevId, TD0),
     IndexFn = fun(B) -> maps:get(verifier_index, maps:get(consensus_data, B)) end,
     VerIndexList = lists:map(IndexFn, ChildList),
+    
+    %% io:format("PD ~p ~n", [ProtocolData]),
+    %% io:format("PID ~p ~n", [PrevId]),
+    %% io:format("CL ~p ~n", [ChildList]),
+    %% io:format("B ~p ~n", [Block]),
+    %% io:format("~n~n", []),
+
     ?assertEqual(lists:member(VerIndex, VerIndexList), false),
     
     VerNum = array:size(VerifiersArr),
@@ -196,8 +204,13 @@ add_new_block(Block, CurrentTime, ProtocolData)
     %% current last block keeps track of the last block in the chain
     %% update it, if new block is the last one
 
+
     CurrentLastBlock = ProtocolData#protocol_data.last_block,
     LastBlock = resolve_fork(Block, CurrentLastBlock, TD1),
+
+    %% ?debugVal(CurrentLastBlock),
+    %% ?debugVal(Block),
+    %% ?debugVal(LastBlock),
 
     NewProtocolData = ProtocolData#protocol_data{tree_data = TD1, last_block = LastBlock},
 
@@ -319,6 +332,7 @@ get_verfier_next_block_time(VerifierIndex, PD)
 
 generate_new_block(VerifierIndex, PD)
   when is_record(PD, protocol_data) ->
+
     Time = get_verfier_next_block_time(VerifierIndex, PD),
 
     TD = PD#protocol_data.tree_data,
