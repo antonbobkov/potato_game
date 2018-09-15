@@ -53,7 +53,6 @@ make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time, Transactions) ->
     Block1.
 
 
-
 basic_test() ->
     %% make verifier array, they share keys
     PrivateKey = my_crypto:read_file_key(private, "key1.prv"),
@@ -61,12 +60,13 @@ basic_test() ->
     VerFunc = fun(Index) -> #verifier_public_info{index = Index, public_key = PublicKey} end,
     VerifierArr = array:from_list(lists:map(VerFunc, [0, 1, 2, 3, 4])),
 
+
     CurrentTime = 100,
 
     PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 0), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 1), 110),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD0), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(1, PD0), 110),
 
     B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
     B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
@@ -87,9 +87,9 @@ basic_test() ->
 
     ?assert(PD1#protocol_data.last_block == B5),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 0), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 2), 170),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 4), 190),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD1), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(2, PD1), 170),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(4, PD1), 190),
 
     TD = PD1#protocol_data.tree_data,
 
@@ -114,5 +114,21 @@ basic_test() ->
     T = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
     B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1T])), 
+
+    ok.
+
+generate_block_test() ->
+    %% make verifier array, they share keys
+    PrivateKey = my_crypto:read_file_key(private, "key1.prv"),
+    PublicKey = my_crypto:read_file_key(public, "key1.pub"),
+    VerFunc = fun(Index) -> #verifier_public_info{index = Index, public_key = PublicKey} end,
+    VerifierArr = array:from_list(lists:map(VerFunc, [0, 1, 2, 3, 4])),
+
+
+    CurrentTime = 100,
+
+    PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
+
+    B1 = pop_protocol:generate_new_block(0, PD),
 
     ok.

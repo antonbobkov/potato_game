@@ -4,7 +4,14 @@
 	 add_new_block/3, 
 	 initialize_protocol_data/5,
 	 resolve_fork/3,
-	 get_verfier_next_block_time/2
+	 get_verfier_next_block_time/2,
+	 generate_new_block/2,
+
+	 compute_block_hash/1,
+	 compute_transaction_hash/1,
+
+	 apply_block_signature/2,
+	 apply_transaction_signature/2
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
@@ -53,6 +60,39 @@ compute_transaction_hash(Transaction) when is_map(Transaction) ->
 	  consensus_data := CD#{signature := undefined}
 	 },
     my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
+
+%% @doc Inserts signature into the block.
+%% 
+%% Checks that block's this_id is correct and that signature is correct.
+
+apply_block_signature(Signature, Block) 
+  when is_map(Block) ->
+    Hash = maps:get(this_is, Block),
+    PubKey = get_block_cd(verifier_pub_key, Block),
+
+    ?assertEqual(Hash, compute_block_hash(Block)),
+    
+    ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),
+
+    CD = maps:get(consensus_data, Block),
+    
+    Block#{consensus_data := CD#{signature := Signature}}.
+
+
+%% @doc Inserts signature into the transaction.
+%% 
+%% Checks that the signature is correct.
+
+apply_transaction_signature(Signature, T) 
+  when is_map(T) ->
+    Hash = compute_transaction_hash(T),
+    PubKey = maps:get(player_id, T),
+
+    ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),
+
+    CD = maps:get(consensus_data, T),
+    
+    T#{consensus_data := CD#{signature := Signature}}.
 
 check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
     #{
@@ -251,7 +291,7 @@ resolve_fork_same_parent(B1, B2) ->
 
 %% @doc Get the next appropriate time for a verifier to make a block.
 
-get_verfier_next_block_time(PD, VerifierIndex) 
+get_verfier_next_block_time(VerifierIndex, PD) 
   when is_record(PD, protocol_data) ->
 
     #protocol_data{
@@ -273,3 +313,36 @@ get_verfier_next_block_time(PD, VerifierIndex)
 	    NextTime
     end.
     
+%% @doc Creates next block in the chain for a given verifier.
+%% 
+%% Created block is unsigned.
+
+generate_new_block(VerifierIndex, PD)
+  when is_record(PD, protocol_data) ->
+    Time = get_verfier_next_block_time(VerifierIndex, PD),
+
+    TD = PD#protocol_data.tree_data,
+    
+    VerData = array:get(VerifierIndex, PD#protocol_data.verifiers_arr),
+    VerPub = VerData#verifier_public_info.public_key,
+
+    LastId = maps:get(this_id, PD#protocol_data.last_block),
+
+    B0 = blocktree:generate_new_block(LastId, TD),
+
+    B1 = B0#{
+	     consensus_data := #{
+				 timestamp => Time,
+				 signature => undefined, 
+				 verifier_pub_key => VerPub, 
+				 verifier_index => VerifierIndex
+				}
+	    },
+
+    Hash = compute_block_hash(B1),
+
+    B2 = B1#{this_id := Hash},
+
+    check_block_map_structure(B2),
+
+    B2.

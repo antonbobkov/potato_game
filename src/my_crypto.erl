@@ -4,7 +4,7 @@
 
 hash(Bin) -> crypto:hash(sha256, Bin).
 
-sign(Hash, Key) -> public_key:sign(Hash, none, Key).
+sign(Hash, PrivateKey) -> public_key:sign(Hash, none, PrivateKey).
 verify(Hash, Signature, PubKey) -> public_key:verify(Hash, none, Signature, PubKey).
     
 
