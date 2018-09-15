@@ -22,10 +22,8 @@ handle_call(_, _From, BlockNum) ->
   {reply, max(-1,BlockNum - 10), BlockNum}.
 
 
-%TODO figure out how to do this
-%handle_cast(Cmd, BlockNum) when Cmd == stop ->{stop, ok, BlockNum}.
-
-%% update the block state
+handle_cast(Cmd, BlockNum) when Cmd == stop ->
+  {stop, ok, BlockNum};
 handle_cast(NewBlockNum, _) ->
   %?debugMsg("handlecast"),
   {noreply, NewBlockNum}.
