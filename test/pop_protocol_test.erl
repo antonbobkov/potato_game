@@ -2,6 +2,8 @@
   
 -include_lib("eunit/include/eunit.hrl").
 
+%% -export([basic_test/0, generate_block_test/0]).
+
 -include_lib("stdlib/include/assert.hrl").
 
 -include("../src/potato_records.hrl").
@@ -52,27 +54,41 @@ make_block(PrevId, Height, PrivateKey, PublicKey, Index, Time, Transactions) ->
 		    },
     Block1.
 
-
-
-basic_test() ->
+make_verifier_array() ->
     %% make verifier array, they share keys
     PrivateKey = my_crypto:read_file_key(private, "key1.prv"),
     PublicKey = my_crypto:read_file_key(public, "key1.pub"),
     VerFunc = fun(Index) -> #verifier_public_info{index = Index, public_key = PublicKey} end,
     VerifierArr = array:from_list(lists:map(VerFunc, [0, 1, 2, 3, 4])),
 
+    {VerifierArr, PrivateKey, PublicKey}.
+    
+
+generate_block(Index, PrivateKey, PD) ->
+    B0 = pop_protocol:generate_new_block(Index, PD),
+    Sign = my_crypto:sign(maps:get(this_id, B0), PrivateKey),
+    B1 = pop_protocol:apply_block_signature(Sign, B0),
+    B1.
+    
+
+basic_test() ->
+    {VerifierArr, PrivateKey, PublicKey} = make_verifier_array(),
+
     CurrentTime = 100,
 
     PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 0), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD0, 1), 110),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD0), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(1, PD0), 110),
 
     B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
     B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
     B3 = make_block(maps:get(this_id, B1), 2, PrivateKey, PublicKey, 2, 120),
     B4 = make_block(maps:get(this_id, B2), 2, PrivateKey, PublicKey, 3, 130),
     B5 = make_block(maps:get(this_id, B4), 3, PrivateKey, PublicKey, 4, 140),
+
+    ?assertEqual(B1, generate_block(1, PrivateKey, PD0)),
+    ?assertEqual(B2, generate_block(2, PrivateKey, PD0)),
 
     FoldFn = fun(Block, PD) -> 
 		     CD = maps:get(consensus_data, Block),
@@ -83,13 +99,21 @@ basic_test() ->
     lists:foldl(FoldFn, PD0, [B1]),
     lists:foldl(FoldFn, PD0, [B1, B3]),
     lists:foldl(FoldFn, PD0, [B1, B2, B3, B4, B5]),
+
+    PD01 = lists:foldl(FoldFn, PD0, [B1]),
+    ?assertEqual(B3, generate_block(2, PrivateKey, PD01)),
+
+    PD02 = lists:foldl(FoldFn, PD0, [B2]),
+    ?assertEqual(B4, generate_block(3, PrivateKey, PD02)),
+
+
     PD1 = lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
 
     ?assert(PD1#protocol_data.last_block == B5),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 0), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 2), 170),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(PD1, 4), 190),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD1), 150),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(2, PD1), 170),
+    ?assertEqual(pop_protocol:get_verfier_next_block_time(4, PD1), 190),
 
     TD = PD1#protocol_data.tree_data,
 
@@ -115,4 +139,31 @@ basic_test() ->
     B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1T])), 
 
+    ok.
+
+%% get entry in block's consensus data
+get_block_cd(Entry, Block) -> maps:get(Entry, maps:get(consensus_data, Block)).
+
+
+generate_block_test() ->
+    %% ?debugHere,
+    %% ?debugVal("hi"),
+    {VerifierArr, PrivateKey, _} = make_verifier_array(),
+
+    CurrentTime = 100,
+
+    PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
+
+    MakeChainFn = fun(VerifierIndex, PD) -> 
+			  Block = generate_block(VerifierIndex, PrivateKey, PD),
+			  %% io:format(user, "B ~p ~n", [Block]),
+			  %% io:format(user, "~n~n", []),
+			  pop_protocol:add_new_block(Block, get_block_cd(timestamp, Block) + 1, PD) 
+		  end,
+
+    lists:foldl(MakeChainFn, PD0, [1]),
+    lists:foldl(MakeChainFn, PD0, [1, 0]),
+    lists:foldl(MakeChainFn, PD0, [1, 1]),
+    lists:foldl(MakeChainFn, PD0, [1, 0, 2, 4, 0, 3, 1]),
+    
     ok.
