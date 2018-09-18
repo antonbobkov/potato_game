@@ -1,4 +1,4 @@
--module(not_haskell).
+-module(potato_haskell).
 
 -export([mapAccumL/3, for/2]).
 
@@ -11,11 +11,11 @@
   Out :: term(),
   T :: term().
 mapAccumL(Fun, Acc, List) ->
-  lists:foldl(fun(_x, {_acc, _outlist}) ->
-    {NAcc, NOut} = Fun(_x, _acc),
+  lists:foldl(fun(X, {FAcc, Outlist}) ->
+    {NAcc, NOut} = Fun(X, FAcc),
     %% inefficient snocing, w/e
     %% TODO implement using foldr instead
-    {NAcc, _outlist ++ [NOut]}
+    {NAcc, Outlist ++ [NOut]}
   end, {Acc,[]}, List).
 
 %% not exactly forM but whatever

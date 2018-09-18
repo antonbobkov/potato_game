@@ -1,4 +1,4 @@
--module(not_haskell_test).
+-module(potato_haskell_test).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -7,9 +7,9 @@
 mapAccumL_test() ->
   StartList = [1,1,1,1,1,1,1,1],
   EndList = [1,2,3,4,5,6,7,8],
-  {Acc, List} = not_haskell:mapAccumL(fun(_x, _acc) -> {_x+_acc, _x+_acc} end, 0, StartList),
-  ?assertEqual(Acc, 8),
-  ?assertEqual(List, EndList),
+  {OutAcc, OutList} = potato_haskell:mapAccumL(fun(X, Acc) -> {X+Acc, X+Acc} end, 0, StartList),
+  ?assertEqual(OutAcc, 8),
+  ?assertEqual(OutList, EndList),
   ok.
 
 for_test_recfun(Pid, 0) ->
@@ -29,7 +29,7 @@ for_test() ->
   N = 10,
   SelfPid = self(),
   Pid = spawn(fun() -> for_test_recfun(SelfPid, N) end),
-  not_haskell:for(fun() -> Pid ! hi end, N),
+  potato_haskell:for(fun() -> Pid ! hi end, N),
   receive
     _ -> ok
   end.
