@@ -33,7 +33,7 @@ handle_cast(accept, S = #state{socket=ListenSocket}) ->
   supersocket:start_socket(),
 
   %% server initiates handshake stuff
-  ok = gen_tcp:send(AcceptSocket, io_lib:format("Welcome to my 🥔🥔🥔 server~n", [])),
+  ok = gen_tcp:send(AcceptSocket, <<"Welcome to my 🥔🥔🥔 server\n">>),
 
   %% once we send out handshake, start actively listening for a response
   ok = inet:setopts(AcceptSocket, [{active, once}]),

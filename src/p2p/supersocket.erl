@@ -6,17 +6,18 @@
 -export([start_socket/0]).
 -export([init/1]).
 
+-include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 start_socket_server() ->
-  io:fwrite("starting socket server on port 5678\n"),
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 
 init([]) ->
-  Port = 5678,
+  Port = 8384,
   %% what is {packet, line} idk?
   {ok, ListenSocket} = gen_tcp:listen(Port, [{active,once}, {packet,line}]),
+  io:fwrite("supersocket listening on port ~p\n", [inet:port(ListenSocket)]),
   spawn_link(fun empty_listeners/0),
   {ok, {{simple_one_for_one, 60, 3600},[
     {socket,
