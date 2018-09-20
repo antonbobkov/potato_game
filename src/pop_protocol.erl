@@ -331,6 +331,7 @@ get_verfier_next_block_time(VerifierIndex, PD)
 %% @doc Creates next block in the chain for a given verifier.
 %% 
 %% Created block is unsigned.
+%% (Pending transactions are put into the block by blocktree.)
 
 generate_new_block(VerifierIndex, PD)
   when is_record(PD, protocol_data) ->
