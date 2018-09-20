@@ -93,7 +93,7 @@ basic_test() ->
     FoldFn = fun(Block, PD) -> 
 		     CD = maps:get(consensus_data, Block),
 		     T = maps:get(timestamp, CD),
-		     pop_protocol:add_new_block(Block, T + 1, PD) 
+		     pop_protocol:add_block_in_order(Block, T + 1, PD) 
 	     end,
 
     lists:foldl(FoldFn, PD0, [B1]),
@@ -109,7 +109,7 @@ basic_test() ->
 
     PD1 = lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
 
-    ?assert(PD1#protocol_data.last_block == B5),
+    ?assert(PD1#protocol_data.head_block == B5),
 
     ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD1), 150),
     ?assertEqual(pop_protocol:get_verfier_next_block_time(2, PD1), 170),
@@ -134,10 +134,14 @@ basic_test() ->
     ?assertError(_, lists:foldl(FoldFn, PD0, [E2])),
     ?assertError(_, lists:foldl(FoldFn, PD0, [B1, E3])),
 
-    %% Error for when same verifier adds two different blocks
+    %% same verifier adds two different blocks
     T = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
     B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
-    ?assertError(_, lists:foldl(FoldFn, PD0, [B1, B1T])), 
+    PDT = lists:foldl(FoldFn, PD0, [B1, B1T]),
+
+    MinHash = min(maps:get(this_id, B1), maps:get(this_id, B1T)),
+    HeadHash = maps:get(this_id, PDT#protocol_data.head_block),
+    ?assertEqual(MinHash, HeadHash),
 
     ok.
 
@@ -158,7 +162,7 @@ generate_block_test() ->
 			  Block = generate_block(VerifierIndex, PrivateKey, PD),
 			  %% io:format(user, "B ~p ~n", [Block]),
 			  %% io:format(user, "~n~n", []),
-			  pop_protocol:add_new_block(Block, get_block_cd(timestamp, Block) + 1, PD) 
+			  pop_protocol:add_block_in_order(Block, get_block_cd(timestamp, Block) + 1, PD) 
 		  end,
 
     lists:foldl(MakeChainFn, PD0, [1]),

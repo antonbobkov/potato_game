@@ -56,7 +56,7 @@ add_new_transaction_test() ->
 add_empty_genesis_test() ->
     TD = #tree_data{transaction_map=maps:new(), block_map=maps:new()},
     Block = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
-    TD1 = blocktree:add_new_block(Block, TD),
+    TD1 = blocktree:add_block_in_order(Block, TD),
 
     BMP = TD1#tree_data.block_map,
     ?assert(maps:size(BMP) == 1),
@@ -76,7 +76,7 @@ add_tr_genesis_test() ->
     Block = #{previous_id => undefined, this_id => 0, height => 0,
 		   transactions => map_of_arrays_to_list(TDD#tree_data.transaction_map)},
 		   %% transactions = TD1#tree_data.transaction_map},
-    TD1 = blocktree:add_new_block(Block, TD),
+    TD1 = blocktree:add_block_in_order(Block, TD),
 
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 2),
@@ -104,7 +104,7 @@ add_tr_genesis_2_test() ->
 
     Block = make_block(undefined, hi, 0, [{0, p1}, {0, p2}, {1, p1}]),
 
-    TD1 = blocktree:add_new_block(Block, TD),
+    TD1 = blocktree:add_block_in_order(Block, TD),
 
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 2),
@@ -126,7 +126,7 @@ mult_blocks_test() ->
 
     Batch = [Ba, Bb, Bc],
 
-    TD1 = lists:foldl(fun blocktree:add_new_block/2, TD, Batch),
+    TD1 = lists:foldl(fun blocktree:add_block_in_order/2, TD, Batch),
 
     MP = TD1#tree_data.transaction_map,
     ?assert(maps:size(MP) == 4),
@@ -174,7 +174,7 @@ generate_block_mult_seq_test() ->
 
 		 TD1 = lists:foldl(fun add_mult_trans/2, TD0, L),
 		 B = (blocktree:generate_new_block(PrevId, TD1))#{this_id := Id},
-		 TD2 = blocktree:add_new_block(B, TD1),
+		 TD2 = blocktree:add_block_in_order(B, TD1),
 		 TD2
 	 end,
 
@@ -204,11 +204,11 @@ generate_block_mult_seq_test() ->
     %% fork from genesis
     Block3 = #{previous_id => 0, this_id => 3, height => 1, transactions => []},
     Block4 = #{previous_id => 1, this_id => 4, height => 2, transactions => []},
-    TD1 = blocktree:add_new_block(Block0, TD0),
-    TD2 = blocktree:add_new_block(Block1, TD1),
-    TD3 = blocktree:add_new_block(Block2, TD2),
-    TD4 = blocktree:add_new_block(Block3, TD3),
-    TD5 = blocktree:add_new_block(Block4, TD4),
+    TD1 = blocktree:add_block_in_order(Block0, TD0),
+    TD2 = blocktree:add_block_in_order(Block1, TD1),
+    TD3 = blocktree:add_block_in_order(Block2, TD2),
+    TD4 = blocktree:add_block_in_order(Block3, TD3),
+    TD5 = blocktree:add_block_in_order(Block4, TD4),
 
     ?assertEqual(length(blocktree:get_all_longest_branches(TD5)), 2),
 

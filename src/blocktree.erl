@@ -2,7 +2,7 @@
 
 -export([
 	 add_new_transaction/2,
-	 add_new_block/2,
+	 add_block_in_order/2,
 	 generate_new_block/2,
 	 get_block_by_id/2,
 	 get_all_longest_branches/1,
@@ -61,7 +61,7 @@ add_new_transaction_to_map(Transaction, TransactionMap)
 %% Can only do so in order.
 %% High nonce, and duplicate transactions are ignored.
 %% Fails with error if there is a different transaction with the same nonce.
-%% This function will be called indirectly from add_new_block
+%% This function will be called indirectly from add_block_in_order
 
 add_new_transaction(Transaction, TreeData)
   when is_map(Transaction),
@@ -175,7 +175,7 @@ transaction_map_from_list(T, Map) ->
 %% Note: genesis block will have previous_id=undefined and height=0
 
 
-add_new_block(Block, TreeData)
+add_block_in_order(Block, TreeData)
   when is_map(Block),
        is_record(TreeData, tree_data) ->
 

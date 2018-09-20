@@ -1,7 +1,8 @@
 -module(pop_protocol).
 
 -export([
-	 add_new_block/3, 
+	 add_block_in_order/3, 
+
 	 initialize_protocol_data/5,
 	 resolve_fork/3,
 	 get_verfier_next_block_time/2,
@@ -117,7 +118,7 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
     ok.
     
 
-add_new_block(Block, CurrentTime, ProtocolData)
+add_block_in_order(Block, CurrentTime, ProtocolData)
   when 
       is_record(ProtocolData, protocol_data), 
       is_map(Block)
@@ -167,19 +168,6 @@ add_new_block(Block, CurrentTime, ProtocolData)
 
     ?assert(PreviousBlockTimestamp < Tmp, "time should be larger than previous"),
     ?assert(Tmp - TimeDesyncMargin < CurrentTime, "block cannot be in the future"),
-
-    %% Check that this verifier hasn't already submitted a block here
-    ChildList = blocktree:get_children_block_list(PrevId, TD0),
-    IndexFn = fun(B) -> maps:get(verifier_index, maps:get(consensus_data, B)) end,
-    VerIndexList = lists:map(IndexFn, ChildList),
-    
-    %% io:format("PD ~p ~n", [ProtocolData]),
-    %% io:format("PID ~p ~n", [PrevId]),
-    %% io:format("CL ~p ~n", [ChildList]),
-    %% io:format("B ~p ~n", [Block]),
-    %% io:format("~n~n", []),
-
-    ?assertEqual(lists:member(VerIndex, VerIndexList), false),
     
     VerNum = array:size(VerifiersArr),
     ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
@@ -199,20 +187,20 @@ add_new_block(Block, CurrentTime, ProtocolData)
     %% add this block to tree_data 
     %% this can trigger errors if the block if poorly formed
     %% also fails if block is orphan or already exists
-    TD1 = blocktree:add_new_block(Block, TD0),
+    TD1 = blocktree:add_block_in_order(Block, TD0),
 
     %% current last block keeps track of the last block in the chain
     %% update it, if new block is the last one
 
 
-    CurrentLastBlock = ProtocolData#protocol_data.last_block,
-    LastBlock = resolve_fork(Block, CurrentLastBlock, TD1),
+    CurrentHeadBlock = ProtocolData#protocol_data.head_block,
+    HeadBlock = resolve_fork(Block, CurrentHeadBlock, TD1),
 
-    %% ?debugVal(CurrentLastBlock),
+    %% ?debugVal(CurrentHeadBlock),
     %% ?debugVal(Block),
-    %% ?debugVal(LastBlock),
+    %% ?debugVal(HeadBlock),
 
-    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1, last_block = LastBlock},
+    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1, head_block = HeadBlock},
 
     NewProtocolData.
 
@@ -237,7 +225,7 @@ initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, Chain
 				}
 	    },
     check_block_map_structure(B1),
-    TD1 = blocktree:add_new_block(B1, TD0),
+    TD1 = blocktree:add_block_in_order(B1, TD0),
 
     PD = #protocol_data{
 	    verifiers_arr = VerifierArr,
@@ -245,9 +233,16 @@ initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, Chain
 	    time_desync_margin = TimeDesyncMargin,
 	     chain_id = ChainId,
 	    tree_data = TD1,
-	    last_block = B1
+	    head_block = B1
 	   },
     PD.
+
+%% @doc Resolves a fork between two branches.
+%% 
+%% Block with larger height wins.
+%% If heights are the same, then branches are traced to the first branching point,
+%% and then block at branching point with earlier timestamp wins.
+%% If those timestamps are equal, block with smaller hash wins.
 
 resolve_fork(B1, B2, TreeData)
   when 
@@ -289,17 +284,24 @@ resolve_fork_select_branch(B1, B2, TreeData) ->
     end.
 
 resolve_fork_same_parent(B1, B2) ->
-    CD1 = maps:get(consensus_data, B1),
-    CD2 = maps:get(consensus_data, B2),
-
-    T1 = maps:get(timestamp, CD1),
-    T2 = maps:get(timestamp, CD2),
+    T1 = get_block_cd(timestamp, B1),
+    T2 = get_block_cd(timestamp, B2),
 
     if 
 	T1 < T2 ->
 	    first;
 	T2 < T1 ->
-	    second
+	    second;
+	T1 == T2 ->
+	    Id1 = maps:get(this_id, B1),
+	    Id2 = maps:get(this_id, B2),
+	    if 
+		Id1 < Id2 ->
+		    first;
+		Id2 < Id1 ->
+		    second
+	    end
+	    
     end.
 
 %% @doc Get the next appropriate time for a verifier to make a block.
@@ -310,12 +312,12 @@ get_verfier_next_block_time(VerifierIndex, PD)
     #protocol_data{
 	    verifiers_arr = VerifierArr,
 	    time_between_blocks = TimeBetweenBlocks,
-	    last_block = LastBlock
+	    head_block = HeadBlock
       } = PD,
 
     VerNum = array:size(VerifierArr),
     
-    LastTime = get_block_cd(timestamp, LastBlock),
+    LastTime = get_block_cd(timestamp, HeadBlock),
     LastZeroTime = LastTime - (LastTime rem (VerNum * TimeBetweenBlocks)),
     NextTime = LastZeroTime + VerifierIndex * TimeBetweenBlocks,
 
@@ -340,7 +342,7 @@ generate_new_block(VerifierIndex, PD)
     VerData = array:get(VerifierIndex, PD#protocol_data.verifiers_arr),
     VerPub = VerData#verifier_public_info.public_key,
 
-    LastId = maps:get(this_id, PD#protocol_data.last_block),
+    LastId = maps:get(this_id, PD#protocol_data.head_block),
 
     B0 = blocktree:generate_new_block(LastId, TD),
 
