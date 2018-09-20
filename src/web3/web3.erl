@@ -10,6 +10,7 @@
 % -define(K, 10).
 
 %%
+-spec init(_) -> {ok,-1}.
 init(_) ->
   %?debugMsg("starting web3 server..."),
   Pid = self(),
@@ -17,11 +18,13 @@ init(_) ->
   {ok, -1}.
 
 %% return current block number
+-spec handle_call(_, {pid(),_}, integer()) -> {reply, integer(), integer()}.
 handle_call(_, _From, BlockNum) ->
   %?debugMsg("handlecall"),
   {reply, max(-1,BlockNum - 10), BlockNum}.
 
 
+-spec handle_cast(stop|integer(), integer()) -> {stop, ok, integer()} | {noreply, integer()}.
 handle_cast(Cmd, BlockNum) when Cmd == stop ->
   {stop, ok, BlockNum};
 handle_cast(NewBlockNum, _) ->
@@ -29,10 +32,10 @@ handle_cast(NewBlockNum, _) ->
   {noreply, NewBlockNum}.
 
 
-
+-spec height_poll(string(), pid()) -> no_return().
 height_poll(Provider, _ReplyPid)->
   %TODO actually poll
   timer:sleep(100),
   %?debugFmt("polling... ~p~n", [_ReplyPid]),
   gen_server:cast(_ReplyPid, 123),
-  height_poll(providerurl, _ReplyPid).
+  height_poll(Provider, _ReplyPid).

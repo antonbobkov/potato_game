@@ -13,8 +13,21 @@
 
 -include("potato_records.hrl").
 
+-type tx() :: map().
+-type txarray() :: array:array(tx()).
+-type txlist() :: [tx()].
+-type playertxmap() :: map().
+-type addresult() :: ignore_duplicate | added | ignore_nonce_too_high.
+-type treedata() :: #tree_data{}.
+-type playerid() :: integer().
+-type nonce() :: integer().
+-type blockid() :: integer() | undefined.
+-type blockmap() :: map().
+-type block() :: map().
+-type playernoncemap() :: map().
 
-
+-spec add_new_transaction_to_array(tx(), txarray()) ->
+	{addresult(), txarray()}.
 add_new_transaction_to_array(Transaction, TransactionArray)
   when is_map(Transaction) ->
 
@@ -38,6 +51,7 @@ add_new_transaction_to_array(Transaction, TransactionArray)
 	    {added, NewTA}
     end.
 
+-spec add_new_transaction_to_map(tx(), playertxmap()) -> {addresult(), playertxmap()}.
 add_new_transaction_to_map(Transaction, TransactionMap)
   when is_map(Transaction) ->
 
@@ -57,12 +71,12 @@ add_new_transaction_to_map(Transaction, TransactionMap)
     {Msg, NewTM}.
 
 %% @doc Adds a new transaction to transaction list.
-%% 
+%%
 %% Can only do so in order.
 %% High nonce, and duplicate transactions are ignored.
 %% Fails with error if there is a different transaction with the same nonce.
 %% This function will be called indirectly from add_block_in_order
-
+-spec add_new_transaction(tx(), treedata()) -> {addresult(), treedata()}.
 add_new_transaction(Transaction, TreeData)
   when is_map(Transaction),
        is_record(TreeData, tree_data) ->
@@ -84,7 +98,7 @@ add_new_transaction(Transaction, TreeData)
 %%     ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
 
 %%     ?assertEqual(array:to_list(NonceList), ProperNonceList, "bad nonce order").
-
+-spec transaction_list_check_if_in_order(playerid(), txlist()) -> ok.
 transaction_list_check_if_in_order(_, List) ->
     NonceList = lists:map(fun (T) -> maps:get(nonce, T) end, List),
     [FirstNonce | _] = NonceList,
@@ -103,16 +117,20 @@ transaction_list_check_if_in_order(_, List) ->
 %%     Sz = array:size(TransactionList),
 %%     FirstNonce + Sz - 1.
 
+-spec get_first_nonce_in_transaction_list(playerid(), txlist()) -> nonce().
 get_first_nonce_in_transaction_list(_, TransactionList) ->
     [FirstTransaction | _ ] = TransactionList,
     maps:get(nonce, FirstTransaction).
 
+-spec get_last_nonce_in_transaction_list(txlist()) -> nonce().
 get_last_nonce_in_transaction_list(TransactionList) ->
     [FirstTransaction | _ ] = TransactionList,
     FirstNonce = maps:get(nonce, FirstTransaction),
     Sz = length(TransactionList),
     FirstNonce + Sz - 1.
 
+
+-spec search_previous_transaction_nonce_for_player(playerid(), blockmap(), blockid()) -> nonce().
 search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == undefined ->
     -1;
 search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
@@ -140,6 +158,7 @@ search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) ->
 %% check_that_player_ids_are_correct(TransactionMap) ->
 %%     maps:map(fun(Id, Lst) -> check_that_player_ids_are_correct(list, Lst, Id) end, TransactionMap).
 
+-spec transaction_map_from_list(txlist()) -> playertxmap().
 transaction_map_from_list(ListR) ->
     List = lists:reverse(ListR),
     lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
@@ -155,11 +174,11 @@ transaction_map_from_list(T, Map) ->
     maps:put(Id, NewList, Map).
 
 %% @doc Adds a new block to the blocktree.
-%% 
+%%
 %% If successful, it returns updated TreeData.
-%% 
+%%
 %% Fails if:
-%% 
+%%
 %% <ul>
 %% <li> can't find previous block</li>
 %% <li> this_id is not unique </li>
@@ -171,10 +190,12 @@ transaction_map_from_list(T, Map) ->
 %%   </ul>
 %% </li>
 %% </ul>
-%% 
+%%
 %% Note: genesis block will have previous_id=undefined and height=0
 
 
+
+-spec add_block_in_order(block(), treedata()) -> treedata().
 add_block_in_order(Block, TreeData)
   when is_map(Block),
        is_record(TreeData, tree_data) ->
@@ -231,9 +252,11 @@ add_block_in_order(Block, TreeData)
 
     TD2.
 
+-spec extract_transaction_range(nonce(), txarray()) -> txlist().
 extract_transaction_range(NonceFirst, FullTransactionArr) ->
     extract_transaction_range(NonceFirst, array:size(FullTransactionArr)-1, FullTransactionArr).
 
+-spec extract_transaction_range(nonce(), nonce(), txarray()) -> txlist().
 extract_transaction_range(NonceFirst, NonceLast, FullTransactionArr) when NonceFirst =< NonceLast ->
     T = array:get(NonceFirst, FullTransactionArr),
     [T | extract_transaction_range(NonceFirst + 1, NonceLast, FullTransactionArr)];
@@ -241,6 +264,7 @@ extract_transaction_range(NonceFirst, NonceLast, FullTransactionArr) when NonceF
 extract_transaction_range(NonceFirst, NonceLast, _) when NonceFirst > NonceLast ->
     [].
 
+-spec extract_transaction_range_full(playernoncemap(), playertxmap()) -> txlist().
 extract_transaction_range_full(FirstNonceMap, TransactionMap) ->
     Fn = fun(Id, _, Acc) ->
 		 {ok, Nonce} = maps:find(Id, FirstNonceMap),
@@ -250,7 +274,7 @@ extract_transaction_range_full(FirstNonceMap, TransactionMap) ->
 	 end,
     maps:fold(Fn, [], FirstNonceMap).
 
-
+-spec generate_new_block(blockid(), treedata()) -> map().
 generate_new_block(PreviousBlockId, TreeData)
   when is_record(TreeData, tree_data) ->
     #tree_data{block_map = BlockMap, transaction_map = TransactionMap} = TreeData,
@@ -283,7 +307,7 @@ generate_new_block(PreviousBlockId, TreeData)
       consensus_data => undefined
      }.
 
-
+-spec get_block_by_id(blockid(), treedata()) -> block().
 get_block_by_id(Id, TreeData)
   when is_record(TreeData, tree_data) ->
 
@@ -294,6 +318,7 @@ get_block_by_id(Id, TreeData)
     {ok, Block} = Result,
     Block.
 
+-spec get_all_longest_branches(treedata()) -> [block()].
 get_all_longest_branches(TreeData)
   when is_record(TreeData, tree_data) ->
     #tree_data{block_map = BlockMap} = TreeData,
@@ -302,8 +327,8 @@ get_all_longest_branches(TreeData)
     MaxHtList = maps:values(maps:filter(fun(_, V) -> maps:get(height, V) == MaxHt end, BlockMap)),
     MaxHtList.
 
+-spec get_children_block_list(blockid(), treedata()) -> [block()].
 get_children_block_list(PrevId, TreeData)
   when is_record(TreeData, tree_data) ->
     #tree_data{block_map = BlockMap} = TreeData,
     maps:values(maps:filter(fun(_, B) -> maps:get(previous_id, B) == PrevId end, BlockMap)).
-    
