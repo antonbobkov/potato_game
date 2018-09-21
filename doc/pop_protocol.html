@@ -14,27 +14,78 @@
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_new_block-3">add_new_block/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#get_genesis_tree_data-1">get_genesis_tree_data/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#resolve_fork-3">resolve_fork/3</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block_in_order-3">add_block_in_order/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#apply_block_signature-2">apply_block_signature/2</a></td><td>Inserts signature into the block.</td></tr>
+<tr><td valign="top"><a href="#apply_transaction_signature-2">apply_transaction_signature/2</a></td><td>Inserts signature into the transaction.</td></tr>
+<tr><td valign="top"><a href="#compute_block_hash-1">compute_block_hash/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#compute_transaction_hash-1">compute_transaction_hash/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td>Creates next block in the chain for a given verifier.</td></tr>
+<tr><td valign="top"><a href="#get_verfier_next_block_time-2">get_verfier_next_block_time/2</a></td><td>Get the next appropriate time for a verifier to make a block.</td></tr>
+<tr><td valign="top"><a href="#initialize_protocol_data-5">initialize_protocol_data/5</a></td><td>Initialize protocol data.</td></tr>
+<tr><td valign="top"><a href="#resolve_fork-3">resolve_fork/3</a></td><td>Resolves a fork between two branches.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="add_new_block-3">add_new_block/3</a></h3>
+<h3 class="function"><a name="add_block_in_order-3">add_block_in_order/3</a></h3>
 <div class="spec">
-<p><tt>add_new_block(Block, CurrentTime, ProtocolData) -&gt; any()</tt></p>
+<p><tt>add_block_in_order(Block, CurrentTime, ProtocolData) -&gt; any()</tt></p>
 </div>
 
-<h3 class="function"><a name="get_genesis_tree_data-1">get_genesis_tree_data/1</a></h3>
+<h3 class="function"><a name="apply_block_signature-2">apply_block_signature/2</a></h3>
 <div class="spec">
-<p><tt>get_genesis_tree_data(CurrentTime) -&gt; any()</tt></p>
+<p><tt>apply_block_signature(Signature, Block) -&gt; any()</tt></p>
+</div><p><p>Inserts signature into the block.</p>
+ 
+  Checks that block's this_id is correct and that signature is correct.</p>
+
+<h3 class="function"><a name="apply_transaction_signature-2">apply_transaction_signature/2</a></h3>
+<div class="spec">
+<p><tt>apply_transaction_signature(Signature, T) -&gt; any()</tt></p>
+</div><p><p>Inserts signature into the transaction.</p>
+ 
+  Checks that the signature is correct.</p>
+
+<h3 class="function"><a name="compute_block_hash-1">compute_block_hash/1</a></h3>
+<div class="spec">
+<p><tt>compute_block_hash(Block) -&gt; any()</tt></p>
 </div>
+
+<h3 class="function"><a name="compute_transaction_hash-1">compute_transaction_hash/1</a></h3>
+<div class="spec">
+<p><tt>compute_transaction_hash(Transaction) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
+<div class="spec">
+<p><tt>generate_new_block(VerifierIndex, PD) -&gt; any()</tt></p>
+</div><p><p>Creates next block in the chain for a given verifier.</p>
+ 
+  Created block is unsigned.
+  (Pending transactions are put into the block by blocktree.)</p>
+
+<h3 class="function"><a name="get_verfier_next_block_time-2">get_verfier_next_block_time/2</a></h3>
+<div class="spec">
+<p><tt>get_verfier_next_block_time(VerifierIndex, PD) -&gt; any()</tt></p>
+</div><p>Get the next appropriate time for a verifier to make a block.</p>
+
+<h3 class="function"><a name="initialize_protocol_data-5">initialize_protocol_data/5</a></h3>
+<div class="spec">
+<p><tt>initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) -&gt; any()</tt></p>
+</div><p><p>Initialize protocol data.</p>
+ 
+  Creates a tree with genesis block with a fixed timestamp.
+  Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.</p>
 
 <h3 class="function"><a name="resolve_fork-3">resolve_fork/3</a></h3>
 <div class="spec">
 <p><tt>resolve_fork(B1, B2, TreeData) -&gt; any()</tt></p>
-</div>
+</div><p><p>Resolves a fork between two branches.</p>
+ 
+  Block with larger height wins.
+  If heights are the same, then branches are traced to the first branching point,
+  and then block at branching point with earlier timestamp wins.
+  If those timestamps are equal, block with smaller hash wins.</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
