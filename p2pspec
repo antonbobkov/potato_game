@@ -1,0 +1,40 @@
+:::NEW p2p spec:::
+
+1 connection per verifier/player per game. i.e. two verifiers may have more than one connection with each other
+
+::supersocket (listener)::
+- supersocket supervisor that spawns several supersocket_tcplistener gen_server actors to listen for new connections
+- upon receiving new connection, passes connection off to handshake_reply
+
+::superclient::
+- superviosr that accepts requests to create new connection
+- creates a connection. Tries to connect several times up to a timeout period
+- upon making a connection, hands it off to handshaker
+
+::handshaker::
+- handshaker supervisor receives request to start new handshaker either from superclient or from supersocket
+- sends identification + challenge to be signed
+- receives identification + challenge, signs and sends back
+- receives challenge response, verifies
+- if any of the above step fails, close the socket and terminate
+- if all succeed, pass socket on to connection supervisor
+
+::connection supervisor::
+- upon receiving new connection, check if it already exists, if so pick deterministically
+- either close the socket or terminate the existing socket if one exists already
+- create connection actor to manage the socket, store this in some priority sorted list or whatever
+- to create the connection, use handshake data to determine which game it gets assigned
+- if too many connection, remove one of lower priority
+
+::connection::
+- create connection with PID of game manager
+- terminate connection in game manager dies
+- pass all messages to game manager
+
+
+:::game manager:::
+TODO
+
+
+:::web3:::
+TODO
