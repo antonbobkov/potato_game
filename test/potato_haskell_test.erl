@@ -20,7 +20,6 @@ for_test_recfun(Pid, 0) ->
     100 -> ok
   end;
 for_test_recfun(Pid, N) ->
-  ?debugFmt("receiving ~p~n",[N]),
   receive
     _ -> for_test_recfun(Pid, N-1)
   end.
