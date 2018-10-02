@@ -1,0 +1,124 @@
+%% @doc container handling pending transactions.
+%% 
+%% Transactions can come out of order.
+%% Newer transactions rewrite older ones.
+%% This structure allows purge of old transactions,
+%% to control the size of the buffer, however,
+%% it is not implemented here.
+
+-module(pending_transactions).
+
+-export([
+	 init/0,
+	 add_transaction/2,
+	 get_players/1,
+	 get_pending_transactions/2
+	]).
+
+-include_lib("stdlib/include/assert.hrl").
+
+-include("potato_records.hrl").
+
+%% @doc Initialize the container.
+
+init() ->
+    #pending_tx{player_map = maps:new(), counter = 0}.
+
+%% update Pending Transaction container with a new counter and a new transaction map for a player
+
+update_container(PlayerId, TxMp, NewCounter, PendingTx) -> 
+    %% erlang too hard
+
+    PM = (PendingTx#pending_tx.player_map)#{PlayerId => TxMp},
+    
+    PendingTx#pending_tx{player_map = PM, counter = NewCounter}.
+
+
+%% udpate a counter at a TxMap[Nonce] and return modified map and incremented counter
+
+update_counter_at_nonce(Nonce, {Counter, TxMap}) ->
+    {_OldCounter, Data} = maps:get(Nonce, TxMap),
+    TxMapNew = maps:put( {Counter, Data}, TxMap),
+    {Counter + 1, TxMapNew}.
+
+
+
+%% update counters in order at all nonces in TxMap starting at NonceStart
+
+update_all_the_counters(NonceStart, Counter, TxMap) -> 
+
+    NonceList = lists:sort(lists:filter(fun (N) -> N >= NonceStart end, maps:keys(TxMap))),
+    
+    {CounterNew, TxMapNew} = lists:foldl(fun update_counter_at_nonce/2, {Counter, TxMap}, NonceList),
+    {CounterNew, TxMapNew}.
+
+%% inserts transaction into the map and updates all counters at nonces >= Nonce
+
+insert_transaction(Nonce, Transaction, Counter, TxMap0) ->
+    TxMap1 = maps:put(Nonce, {tmp_counter, Transaction}, TxMap0),
+    {CounterNew, TxMap2} = update_all_the_counters(Nonce, Counter, TxMap1),
+    {CounterNew, TxMap2}.
+
+%% @doc Adds new transaction to the container. 
+%% 
+%% Updates counters on later transactions.
+%% Returns {Container, message} where message is 
+%% ignored_duplicate, updated_old, added_new
+
+
+add_transaction(Transaction, PendingTx)
+  when is_record(PendingTx, pending_tx), 
+       is_map(Transaction) ->
+    #{
+      player_id := PlayerId,
+      nonce := Nonce
+     } = Transaction,
+
+    #pending_tx{
+       player_map = PlMap, 
+       counter = Counter
+      } = PendingTx,
+
+    %% find player by id; if doesn't exist, add them
+    case maps:find(player_id, PlMap) of 
+	{ok, TxMap} ->
+	    ok;
+
+	error ->
+	    TxMap = maps:new()
+    end,
+    
+    
+    %% find transaction by nonce
+    case maps:find(Nonce, TxMap) of 
+	{ok, T_old} ->
+	    %% if it exists, see if we need to update it
+	    if T_old == Transaction ->
+		    Status = ignored_duplicate;
+
+	       T_old /= Transaction ->
+		    Status = updated_old
+	    end,	    
+	    ok;
+	error ->
+	    Status = added_new
+    end,
+
+    if Status == ignore_duplicate ->
+	    PendingTx;
+       Status /= ignore_duplicate ->
+	    {CounterNew, TxMapNew} = insert_transaction(Nonce, Transaction, Counter, TxMap),
+
+	    update_container(PlayerId, TxMapNew, CounterNew, PendingTx)
+    end.
+    
+
+%% @doc Get list of all the players in the container.
+
+get_players(_) ->
+    ok.
+
+%% @doc Get all the pending transactions after a point.
+
+get_pending_transactions(_, _) ->
+    ok.
