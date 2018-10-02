@@ -1,4 +1,36 @@
-:::NEW p2p spec:::
+:::POTATO MESSAGES:::
+
+:establishing connection:
+- A->B connect request [conn_uuid, challenge, identity {A, B}]
+  - spam when initiating connection
+  - retry every 10 minutes
+- B->A connect response [conn_uuid, B signed challenge, challenge]
+  - B now stores {conn_uuid, A} in active connections
+- A->B connect response response [conn_uuid, A signed challenge]
+  - A now stores {conn_uuid, B} in active connections
+- A<->B ping
+  - periodic message to indicate the connection is still alive
+
+:blocks:
+- A->B request block
+  - B server caches request {A, blockrange} and starts serving
+  - A should spam this request to ensure receipt
+    - can stop spamming when first block is received
+- B->A send block (either in response to request or when new block is made)
+  - how should A re-request dropped blocks?
+
+:potato TCP msg:
+- TCP nonsense built over UDP
+  - prob easier just to use TCP...
+
+:txs:
+- A->B send tx (that's it)
+
+- client/servers can request for blocks via TCP/IP?
+  (alternatively, just host blocks via http?)
+
+
+:::TCP p2p spec:::
 
 1 connection per verifier/player per game. i.e. two verifiers may have more than one connection with each other
 
