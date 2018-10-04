@@ -5,7 +5,7 @@
 
 web3_test() ->
   {ok, Pid} = gen_server:start(web3, [], []),
-  ?debugFmt("started web3 gen_server ~p~n",[Pid]),
+  %% ?debugFmt("started web3 gen_server ~p~n",[Pid]),
   N1 = gen_server:call(Pid, []),
   ?assertEqual(-1, N1),
 

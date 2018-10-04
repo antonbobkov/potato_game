@@ -6,8 +6,8 @@
 connect() ->
   spawn_link(fun() ->
     {ok, Sock} = gen_tcp:connect("localhost", 8384, [binary, {active, false}]),
-    {ok, Msg} = gen_tcp:recv(Sock, 0),
-    ?debugFmt("recv ~p~n",[Msg]),
+    {ok, _Msg} = gen_tcp:recv(Sock, 0),
+    %% ?debugFmt("recv ~p~n",[Msg]),
     gen_tcp:send(Sock, "handshake_reply"),
     gen_tcp:close(Sock)
   end).

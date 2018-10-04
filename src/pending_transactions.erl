@@ -16,6 +16,7 @@
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -include("potato_records.hrl").
 
@@ -38,7 +39,7 @@ update_container(PlayerId, TxMp, NewCounter, PendingTx) ->
 
 update_counter_at_nonce(Nonce, {Counter, TxMap}) ->
     {_OldCounter, Data} = maps:get(Nonce, TxMap),
-    TxMapNew = maps:put( {Counter, Data}, TxMap),
+    TxMapNew = maps:put(Nonce, {Counter, Data}, TxMap),
     {Counter + 1, TxMapNew}.
 
 
@@ -80,18 +81,21 @@ add_transaction(Transaction, PendingTx)
       } = PendingTx,
 
     %% find player by id; if doesn't exist, add them
-    case maps:find(player_id, PlMap) of 
+    case maps:find(PlayerId, PlMap) of 
 	{ok, TxMap} ->
 	    ok;
 
 	error ->
 	    TxMap = maps:new()
     end,
-    
+
+    %% ?debugVal(Nonce),
+    %% ?debugVal(TxMap),
+    %% ?debugVal(maps:find(Nonce, TxMap)),
     
     %% find transaction by nonce
     case maps:find(Nonce, TxMap) of 
-	{ok, T_old} ->
+	{ok, {_, T_old}} ->
 	    %% if it exists, see if we need to update it
 	    if T_old == Transaction ->
 		    Status = ignored_duplicate;
@@ -104,12 +108,12 @@ add_transaction(Transaction, PendingTx)
 	    Status = added_new
     end,
 
-    if Status == ignore_duplicate ->
-	    PendingTx;
-       Status /= ignore_duplicate ->
+    if Status == ignored_duplicate ->
+	    {PendingTx, Status};
+       Status /= ignored_duplicate ->
 	    {CounterNew, TxMapNew} = insert_transaction(Nonce, Transaction, Counter, TxMap),
 
-	    update_container(PlayerId, TxMapNew, CounterNew, PendingTx)
+	    {update_container(PlayerId, TxMapNew, CounterNew, PendingTx), Status}
     end.
     
 
