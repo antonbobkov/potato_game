@@ -1,22 +1,33 @@
 -module(potato_haskell).
 
--export([mapAccumL/3, for/2]).
+-export([mapAccumL/3, for/2, unfoldr/2]).
 
 
 -spec mapAccumL(Fun, Acc, List) -> {Acc, List} when
-  %% boo args are backwards... why...
-  Fun :: fun((Elem :: T, Acc) -> {Acc, Out}),
+  Fun :: fun((Acc, Elem :: T) -> {Acc, Out}),
   Acc :: term(),
   List :: [T],
   Out :: term(),
   T :: term().
 mapAccumL(Fun, Acc, List) ->
   lists:foldl(fun(X, {FAcc, Outlist}) ->
-    {NAcc, NOut} = Fun(X, FAcc),
+    {NAcc, NOut} = Fun(FAcc, X),
     %% inefficient snocing, w/e
     %% TODO implement using foldr instead
     {NAcc, Outlist ++ [NOut]}
   end, {Acc,[]}, List).
+
+-spec unfoldr(Fun, Acc) -> List when
+  Fun :: fun((Acc) -> Out),
+  Out :: {Elem :: T, Acc} | term(),
+  List :: [T].
+unfoldr(Fun, Acc) -> unfoldr_internal(Fun, Acc, []).
+
+unfoldr_internal(Fun, Acc, Out) ->
+  case Fun(Acc) of
+    {X, NAcc} -> unfoldr_internal(Fun, NAcc, Out++[X]);
+    _ -> Out
+  end.
 
 %% not exactly forM but whatever
 %% probably actually is some haskell function that does this but I can't remeber what it is anymore

@@ -7,7 +7,7 @@
 mapAccumL_test() ->
   StartList = [1,1,1,1,1,1,1,1],
   EndList = [1,2,3,4,5,6,7,8],
-  {OutAcc, OutList} = potato_haskell:mapAccumL(fun(X, Acc) -> {X+Acc, X+Acc} end, 0, StartList),
+  {OutAcc, OutList} = potato_haskell:mapAccumL(fun(Acc, X) -> {X+Acc, X+Acc} end, 0, StartList),
   ?assertEqual(OutAcc, 8),
   ?assertEqual(OutList, EndList),
   ok.
@@ -32,3 +32,13 @@ for_test() ->
   receive
     _ -> ok
   end.
+
+unfoldr_test() ->
+  UnfoldFn = fun(X) ->
+    if X < 10 -> {X, X+1};
+      true -> imdone
+    end
+  end,
+
+  Out = potato_haskell:unfoldr(UnfoldFn, 0),
+  ?assertEqual(Out, [0,1,2,3,4,5,6,7,8,9]).
