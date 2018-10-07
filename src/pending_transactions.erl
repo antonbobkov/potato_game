@@ -11,7 +11,7 @@
 -export([
 	 init/0,
 	 add_transaction/2,
-	 get_players/1,
+	 %% get_all_players/1,
 	 get_pending_transactions/2
 	]).
 
@@ -117,12 +117,50 @@ add_transaction(Transaction, PendingTx)
     end.
     
 
-%% @doc Get list of all the players in the container.
+%% doc Get list of all the players in the container.
 
-get_players(_) ->
-    ok.
+%% get_all_players(#pending_tx{player_map = PlMap}) ->
+%%     maps:keys(PlMap).
 
-%% @doc Get all the pending transactions after a point.
+%% @doc Returns pending transactions in the correct order.
+%% 
+%% For each player P, transactions will start at PlayersStartingNonceMap[P]
+%% and will have consecutive nonces (no gaps).
 
-get_pending_transactions(_, _) ->
-    ok.
+get_pending_transactions(PlayersStartingNonceMap, PendingTx) 
+  when is_map(PlayersStartingNonceMap),
+       is_record(PendingTx, pending_tx) 
+       ->
+
+    PlMap = PendingTx#pending_tx.player_map,
+
+    %% (Key, Value, Acc) applied to PlMap
+    FoldFn = fun (PlayerId, TxMap, TransactionListAcc) ->
+		     R = maps:find(PlayerId, PlayersStartingNonceMap),
+		     case R of
+			 {ok, StartingNonce} -> ok;
+			 error -> StartingNonce = 0
+		     end,
+		     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc)
+	     end,
+
+    % unsorted list of tuples {Counter, Transaction}
+    TransactionList = maps:fold(FoldFn, [], PlMap),
+
+
+    TupleCompareFn = fun({Counter1, _}, {Counter2, _}) -> Counter1 =< Counter2 end,
+    TupleMapFn = fun({_, Transaction}) -> Transaction end,
+
+    lists:map(TupleMapFn, lists:sort(TupleCompareFn, TransactionList)).
+
+%% extracts transactions from a player, in sequential order, starting at Nonce
+collect_transactions_from_player(TxMap, Nonce, TransactionListAcc) ->
+    R = maps:find(Nonce, TxMap),
+    case R of
+	{ok, TxData} -> 
+	    %% insert TxData, increment Nonce
+	    collect_transactions_from_player(TxMap, Nonce + 1, [TxData | TransactionListAcc]);
+	error -> 
+	    %% done
+	    TransactionListAcc
+    end.
