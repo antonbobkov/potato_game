@@ -127,7 +127,10 @@ add_transaction(Transaction, PendingTx)
 %% For each player P, transactions will start at PlayersStartingNonceMap[P]
 %% and will have consecutive nonces (no gaps).
 
-get_pending_transactions(PlayersStartingNonceMap, PendingTx) ->
+get_pending_transactions(PlayersStartingNonceMap, PendingTx) 
+  when is_map(PlayersStartingNonceMap),
+       is_record(PendingTx, pending_tx) 
+       ->
 
     PlMap = PendingTx#pending_tx.player_map,
 
@@ -144,10 +147,11 @@ get_pending_transactions(PlayersStartingNonceMap, PendingTx) ->
     % unsorted list of tuples {Counter, Transaction}
     TransactionList = maps:fold(FoldFn, [], PlMap),
 
+
     TupleCompareFn = fun({Counter1, _}, {Counter2, _}) -> Counter1 =< Counter2 end,
-    TupleFilterFn = fun({_, Transaction}) -> Transaction end,
-    
-    lists:filter(TupleFilterFn, lists:sort(TupleCompareFn, TransactionList)).
+    TupleMapFn = fun({_, Transaction}) -> Transaction end,
+
+    lists:map(TupleMapFn, lists:sort(TupleCompareFn, TransactionList)).
 
 %% extracts transactions from a player, in sequential order, starting at Nonce
 collect_transactions_from_player(TxMap, Nonce, TransactionListAcc) ->
