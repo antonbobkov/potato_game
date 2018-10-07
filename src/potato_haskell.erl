@@ -21,11 +21,11 @@ mapAccumL(Fun, Acc, List) ->
   Fun :: fun((Acc) -> Out),
   Out :: {Elem :: T, Acc} | term(),
   List :: [T].
-unfoldr(Fun, Acc) -> unfoldr_internal(Fun, Acc, []).
+unfoldr(Fun, Acc) -> lists:reverse(unfoldr_internal(Fun, Acc, [])).
 
 unfoldr_internal(Fun, Acc, Out) ->
   case Fun(Acc) of
-    {X, NAcc} -> unfoldr_internal(Fun, NAcc, Out++[X]);
+    {X, NAcc} -> unfoldr_internal(Fun, NAcc, [X]++Out);
     _ -> Out
   end.
 
