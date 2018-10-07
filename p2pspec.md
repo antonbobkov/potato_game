@@ -1,6 +1,14 @@
-:::POTATO MESSAGES:::
+::: POTATO MESSAGES :::
 
-:establishing connection:
+::establishing connection::
+
+Handshake on connection.
+Not necessary?
+Every message will be signed as is.
+Handshake may be useful to prevent TCP connection spam,
+and possible replay attacks for some messages.
+Handshake is stateful.
+
 - A->B connect request [conn_uuid, challenge, identity {A, B}]
   - spam when initiating connection
   - retry every 10 minutes
@@ -11,23 +19,30 @@
 - A<->B ping
   - periodic message to indicate the connection is still alive
 
-:blocks:
-- A->B request block
-  - B server caches request {A, blockrange} and starts serving
-  - A should spam this request to ensure receipt
-    - can stop spamming when first block is received
-- B->A send block (either in response to request or when new block is made)
-  - how should A re-request dropped blocks?
+:: Verifier to Verifier/Player ::
 
-:potato TCP msg:
-- TCP nonsense built over UDP
-  - prob easier just to use TCP...
+- send_blocks [Block]
+  - sends one or more blocks
+  - those may either be newly mined blocks, or after a request for block information
+  
+:: Verifier/Player to Verifier::
 
-:txs:
-- A->B send tx (that's it)
+- request_block_range {MyHead, MyHead - 10, UnknownBlock}
+  - requests a range of unknown blocks leading up to UnknownBlock
+  - verifier should respond with send_blocks
+  - verifier should calculate a range blocks are missing
+  - if verifier doesn't know MyHead and MyHead - 10, the response is ALL the blocks starting from height 0
 
-- client/servers can request for blocks via TCP/IP?
-  (alternatively, just host blocks via http?)
+:: Player to Verifier::
+
+- send_transactions [Transaction]
+  - sends a list of transactions from a player to a verifier
+
+- subscribe {AddressInfo}
+  - stateful
+  - player subscribes to verifier's messages of newly mined blocks
+  - each subscriber is automatically unsubscribed after a minute after subsribe message
+  - to keep the subscription, spam subscribe once in a while (kind of like ping command)
 
 
 :::TCP p2p spec:::
