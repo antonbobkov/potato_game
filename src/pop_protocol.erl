@@ -213,7 +213,7 @@ initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, Chain
 
     ?assert(CurrentTime >= 0),
 
-    TD0 = #tree_data{},
+    TD0 = blocktree:init(),
     B0 = blocktree:generate_new_block(undefined, TD0),
     B1 = B0#{
 	     this_id := genesis,
