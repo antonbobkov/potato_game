@@ -76,7 +76,7 @@ basic_test() ->
 
     CurrentTime = 100,
 
-    PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
+    PD0 = pop_protocol:init(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
     ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD0), 150),
     ?assertEqual(pop_protocol:get_verfier_next_block_time(1, PD0), 110),
@@ -156,7 +156,7 @@ generate_block_test() ->
 
     CurrentTime = 100,
 
-    PD0 = pop_protocol:initialize_protocol_data(VerifierArr, 10, 5, hype_chain, CurrentTime),
+    PD0 = pop_protocol:init(VerifierArr, 10, 5, hype_chain, CurrentTime),
 
     MakeChainFn = fun(VerifierIndex, PD) -> 
 			  Block = generate_block(VerifierIndex, PrivateKey, PD),
