@@ -64,30 +64,43 @@ get_block_status(Hash, PopManager) ->
 	    end
     end.
 
-on_message(net, SenderAddress, send_block_hashes, HashList, State) ->
-    State;
-on_message(net, _ , send_full_blocks, {Age, BlockList}, State) ->
-    State;
-on_message(net, SenderAddress, request_block_hash_range, Range, State) ->
-    State;
-on_message(net, SenderAddress, request_full_blocks, HashList, State) ->
-    State;
-on_message(net, _ , send_transactions, TransactionList, State) ->
-    State.
+on_message(net, SenderAddress, send_block_hashes, HashList, PopManager) ->
+    PopManager;
+
+on_message(net, SenderAddress, send_full_blocks, {Age, BlockList}, PopManager) ->
+    PopManager;
+
+on_message(net, SenderAddress, request_block_hash_range, Range, PopManager) ->
+    PopManager;
+
+on_message(net, SenderAddress, request_full_blocks, HashList, PopManager) ->
+    PopManager;
+
+on_message(net, _ , send_transactions, TransactionList, PopManager) ->
+    PC = PopManager#pop_manager.pop_chain,
+
+    FoldFn = fun (T, PC0) ->
+		     {_, PC1} = pop_protocol:add_transaction(T, PC0),
+		     PC1
+	     end,
+    
+    NewPC = lists:fold(FoldFn, PC, TransactionList),
+
+    PopManager#pop_manager{pop_chain = NewPC}.
 
 %% @doc starts the loop below
 
-start_loop(State) ->
+start_loop(PopManager) ->
     ok.
 
-loop(State, Tid) ->
+loop(PopManager, Tid) ->
     receive 
 	{net, SenderAddress, MsgId, Data} ->
-	    NewState = on_message(net, SenderAddress, MsgId, Data, State),
-	    loop(NewState, Tid);
+	    NewPopManager = on_message(net, SenderAddress, MsgId, Data, PopManager),
+	    loop(NewPopManager, Tid);
 	%% {timer, Time} ->
-	%%     NewState = on_message(timer, Time, State),
-	%%     loop(NewState, Tid);
+	%%     NewPopManager = on_message(timer, Time, PopManager),
+	%%     loop(NewPopManager, Tid);
 	exit ->
 	    %% Tid ! exit,
 	    done;
