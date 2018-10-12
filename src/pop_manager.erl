@@ -5,9 +5,11 @@
 
 -module(pop_manager).
 
-%% -export([
-%% 	 new/0,
-%% 	]).
+-export([
+	 new/2,
+	 on_message/4,
+	 on_message/3
+	]).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -23,8 +25,13 @@
 %% - send network message
 %% - on_new_block: react to new block added to chain
 
-new(PopConfigDat, FunctionHooks) ->
-    ok.
+new(PopConfigData, FunctionHooks) ->
+    #pop_manager{
+       pop_chain = pop_protocol:new(PopConfigData),
+       function_hooks = FunctionHooks,
+       unbound_blocks = maps:new()
+      }.
+    
 
 %% @doc Is the block known to us?
 %% 
