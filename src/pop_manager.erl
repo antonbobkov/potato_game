@@ -33,12 +33,31 @@ new(PopConfigData, FunctionHooks) ->
       }.
     
 
-%% @doc Is the block known to us?
+%% Is the block known to us?
 %% 
 %% It is either in chain, pending as an unbound block,
 %% or unknown altogether.
-get_block_status(Hash, State) ->
-    {in_chain, unbound, unknown}.
+%% Returns in_chain, unbound, or unknown
+get_block_status(Hash, PopManager) ->
+    #pop_manager{
+       pop_chain = PC,
+       unbound_blocks = UB
+      } = PopManager,
+    
+
+    R1 = pop_protocol:find_block_by_id(Hash, PC),
+    case R1 of
+	{ok, _} ->
+	    in_chain;
+	error ->
+	    R2 = maps:find(Hash, UB),
+	    case R2 of
+		{ok, _} ->
+		    unbound;
+		error ->
+		    unknown
+	    end
+    end.
 
 on_message(net, send_block_hashes, HashList, State) ->
     State;
