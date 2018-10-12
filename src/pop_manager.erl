@@ -18,6 +18,11 @@
 
 %% @doc Makes new container, using pop protocol config data,
 %% and external function hooks.
+%% 
+%% Current hooks are: 
+%% - send network message
+%% - on_new_block: react to new block added to chain
+
 new(PopConfigDat, FunctionHooks) ->
     ok.
 
