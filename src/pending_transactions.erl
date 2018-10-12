@@ -16,7 +16,7 @@
 -module(pending_transactions).
 
 -export([
-	 init/0,
+	 new/0,
 	 add_transaction/2,
 	 get_pending_players/1,
 	 get_pending_transactions/2
@@ -29,7 +29,7 @@
 
 %% @doc Initialize the container.
 
-init() ->
+new() ->
     #pending_tx{player_map = maps:new(), counter = 0}.
 
 %% update Pending Transaction container with a new counter and a new transaction map for a player

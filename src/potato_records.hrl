@@ -1,10 +1,13 @@
 -record(tree_data, {pending_transactions, block_map}).
-
--record(verifier_public_info, {index, public_key, network_data}).
--record(protocol_data, {verifiers_arr, time_between_blocks, time_desync_margin, chain_id, tree_data, head_block, orphan_blocks}).
-
 -record(pending_tx, {player_map, counter}).
 
+-record(verifier_public_info, {index, public_key, network_data}).
+-record(pop_config_data, {time_between_blocks, time_desync_margin, chain_id, verifiers_arr, init_time}).
+
+-record(pop_chain, {pop_config_data, tree_data, head_block}).
+
+-record(pop_fun_hooks, {net_send, on_new_block}).
+-record(pop_manager, {unbound_blocks, pop_chain, function_hooks}).
 
 %% These are handled by maps rather than records
 -define(block, [previous_id, this_id, height, transactions, consensus_data]).
