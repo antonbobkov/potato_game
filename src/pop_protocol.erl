@@ -1,12 +1,16 @@
 -module(pop_protocol).
 
 -export([
-	 add_block_in_order/3, 
-
-	 initialize_protocol_data/5,
-	 resolve_fork/3,
-	 get_verfier_next_block_time/2,
+	 init/5,
+	 add_block/3,
+	 add_transaction/2,
 	 generate_new_block/2,
+
+	 find_block_by_id/2,
+
+	 get_verfier_next_block_time/2,
+	 add_block_in_order/3, 
+	 resolve_fork/3,
 
 	 compute_block_hash/1,
 	 compute_transaction_hash/1,
@@ -48,6 +52,7 @@ check_block_map_structure(B) when is_map(B) ->
 %% get entry in block's consensus data
 get_block_cd(Entry, Block) -> maps:get(Entry, maps:get(consensus_data, Block)).
 
+%% @doc Computes hash of the block.
 compute_block_hash(Block) when is_map(Block) ->
     #{consensus_data := CD} = Block,
     CleanBlock = Block#{
@@ -56,6 +61,7 @@ compute_block_hash(Block) when is_map(Block) ->
 	 },
     my_crypto:hash( my_serializer:serialize_object(CleanBlock) ).
 
+%% @doc Computes hash of the transaction.
 compute_transaction_hash(Transaction) when is_map(Transaction) ->
     CD = maps:get(consensus_data, Transaction),
     CleanTransaction = Transaction#{
@@ -97,6 +103,8 @@ apply_transaction_signature(Signature, T)
     T#{consensus_data := CD#{signature := Signature}}.
 
 check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
+    transaction_map_structure_assert(Transaction),
+
     #{
       consensus_data := CD,
       player_id := PlrKey
@@ -117,6 +125,10 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
 
     ok.
     
+%% @doc Adds block to blocktree.
+%% 
+%% The block should new and right after already existing block.
+%% Block's structure is checked and error is generated if it is incorrect.
 
 add_block_in_order(Block, CurrentTime, ProtocolData)
   when 
@@ -124,6 +136,7 @@ add_block_in_order(Block, CurrentTime, ProtocolData)
       is_map(Block)
       ->
 
+    %% checks maps for block and transactions inside
     check_block_map_structure(Block),
 
     #protocol_data{
@@ -209,11 +222,11 @@ add_block_in_order(Block, CurrentTime, ProtocolData)
 %% Creates a tree with genesis block with a fixed timestamp.
 %% Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.
 
-initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
+init(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
 
     ?assert(CurrentTime >= 0),
 
-    TD0 = #tree_data{},
+    TD0 = blocktree:init(),
     B0 = blocktree:generate_new_block(undefined, TD0),
     B1 = B0#{
 	     this_id := genesis,
@@ -363,3 +376,64 @@ generate_new_block(VerifierIndex, PD)
     check_block_map_structure(B2),
 
     B2.
+
+%% @doc Finds block by id.
+%% 
+%% Only looks among non-orphan blocks.
+%% Returns {ok, Block} or error.
+
+find_block_by_id(Id, PD)
+  when is_record(PD, protocol_data) ->
+    maps:find(Id, PD#protocol_data.tree_data#tree_data.block_map).
+
+
+%% @doc Adds block to the structure.
+%% 
+%% Block can be a duplicate, in which case it is ignored,
+%% or it can be an orphan, in which case it is saved
+%% to be added later.
+
+
+add_block(Block, CurrentTime, ProtocolData)
+  when 
+      is_record(ProtocolData, protocol_data), 
+      is_map(Block)
+      ->
+
+    %% checks maps for block and transactions inside
+    check_block_map_structure(Block),
+
+    OrphanMap = ProtocolData#protocol_data.orphan_blocks,
+    ThisId = maps:get(this_id, Block),
+    PrevId = maps:get(previous_id, Block),
+
+    R1 = find_block_by_id(ThisId, ProtocolData),
+    case R1 of
+	{ok, _} ->
+	    {ignored_duplicate, ProtocolData};
+	error ->
+	    R2 = find_block_by_id(maps:get(PrevId, Block), ProtocolData),
+	    case R2 of
+		{ok, _} ->
+		    {added_new, add_block_in_order(Block, CurrentTime, ProtocolData)};
+		error ->
+		    OrphanMapNew = maps:put(ThisId, Block, OrphanMap),
+		    {orphan, ProtocolData#protocol_data{orphan_blocks = OrphanMapNew}}
+	    end	    
+    end.
+
+%% @doc Adds transaction to the structure.
+%% 
+%% Checks transaction correctness first.
+%% Returns {Status, Container} where Status is 
+%% ignored_duplicate, updated_old, added_new
+add_transaction(T, PD)
+  when is_record(PD, protocol_data),
+       is_map(T) ->
+    
+    check_transaction_correctness(T, PD#protocol_data.chain_id),
+
+    TD = PD#protocol_data.tree_data,
+    {Status, TD1} = blocktree:add_transaction(T, TD),
+    
+    {Status, PD#protocol_data{tree_data = TD1} }.

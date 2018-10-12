@@ -83,7 +83,7 @@ add_transaction_test() ->
     ?assertEqual([{0, 3}, {2, 4}, {3, 7}], get_nonce_counter_list(p1, PT1)),
     ?assertEqual([{0, 0}, {1, 5}, {2, 6}], get_nonce_counter_list(p2, PT1)),
 
-    ?assertEqual([{0, p2}, {0, p1}, {1, p2}, {2, p2}], get_all_transactions(#{}, PT1)),
+    ?assertEqual([{0, p2}, {0, p1}, {1, p2}, {2, p2}], get_all_transactions(#{p1 => 0, p2 => 0}, PT1)),
     ?assertEqual([{2, p1}, {1, p2}, {2, p2}, {3, p1}], get_all_transactions(#{p1 => 2, p2 => 1}, PT1)),
 
     ok.

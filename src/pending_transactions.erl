@@ -5,13 +5,20 @@
 %% This structure allows purge of old transactions,
 %% to control the size of the buffer, however,
 %% it is not implemented here.
+%% 
+%% Also, as implemented, there is a replay attack where a two user's transactions
+%% with same nonces are kept being sent alternatively, forcing that user's
+%% transactions in the end. This can be fixed by having the user 
+%% send timestamp with his transactions and then only rewrite transactions
+%% for which timestamp goes up.
+%% (or implement handshake to prevent replays)
 
 -module(pending_transactions).
 
 -export([
 	 init/0,
 	 add_transaction/2,
-	 %% get_all_players/1,
+	 get_pending_players/1,
 	 get_pending_transactions/2
 	]).
 
@@ -117,15 +124,17 @@ add_transaction(Transaction, PendingTx)
     end.
     
 
-%% doc Get list of all the players in the container.
+%% @doc Get list of all the players for which there are pending transactions.
 
-%% get_all_players(#pending_tx{player_map = PlMap}) ->
-%%     maps:keys(PlMap).
+get_pending_players(#pending_tx{player_map = PlMap}) ->
+    maps:keys(PlMap).
 
 %% @doc Returns pending transactions in the correct order.
 %% 
 %% For each player P, transactions will start at PlayersStartingNonceMap[P]
 %% and will have consecutive nonces (no gaps).
+%% 
+%% Transactions for players not in PlayersStartingNonceMap will be ignored.
 
 get_pending_transactions(PlayersStartingNonceMap, PendingTx) 
   when is_map(PlayersStartingNonceMap),
@@ -138,10 +147,13 @@ get_pending_transactions(PlayersStartingNonceMap, PendingTx)
     FoldFn = fun (PlayerId, TxMap, TransactionListAcc) ->
 		     R = maps:find(PlayerId, PlayersStartingNonceMap),
 		     case R of
-			 {ok, StartingNonce} -> ok;
-			 error -> StartingNonce = 0
-		     end,
-		     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc)
+			 {ok, StartingNonce} -> 
+			     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc);
+			 error -> 
+			     %% ignore players not in PlayersStartingNonceMap
+
+			     TransactionListAcc
+		     end
 	     end,
 
     % unsorted list of tuples {Counter, Transaction}
