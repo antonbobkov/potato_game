@@ -21,8 +21,6 @@
 
 -include("potato_records.hrl").
 
-
-
 %% @doc Makes new container, using pop protocol config data,
 %% and external function hooks.
 %% 
@@ -65,6 +63,14 @@ get_block_status(Hash, PopManager) ->
     end.
 
 on_message(net, SenderAddress, send_block_hashes, HashList, PopManager) ->
+    NetSendFn = PopManager#pop_manager.function_hooks#pop_fun_hooks.net_send,
+
+    FilterFn = fun (Hash) -> get_block_status(Hash, PopManager) == unknown end,
+
+    UnknownHashList = lists:filter(FilterFn, HashList),
+
+    NetSendFn(SenderAddress, request_full_blocks, UnknownHashList),
+
     PopManager;
 
 on_message(net, SenderAddress, send_full_blocks, {Age, BlockList}, PopManager) ->
@@ -83,7 +89,7 @@ on_message(net, SenderAddress, request_full_blocks, HashList, PopManager) ->
 			{ok, Block} ->
 			    NetSendFn(SenderAddress, send_full_blocks, {old, [Block]});
 			error ->
-			    erlang:error("unexpected request_full_blocks, unknown hash")
+			    debug_only:error("unexpected request_full_blocks, unknown hash")
 		    end,
 		    Hash
 	    end,
