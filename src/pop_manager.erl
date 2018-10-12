@@ -74,6 +74,22 @@ on_message(net, SenderAddress, request_block_hash_range, Range, PopManager) ->
     PopManager;
 
 on_message(net, SenderAddress, request_full_blocks, HashList, PopManager) ->
+    PC = PopManager#pop_manager.pop_chain,
+    NetSendFn = PopManager#pop_manager.function_hooks#pop_fun_hooks.net_send,
+
+    MapFn = fun (Hash) ->
+		    R1 = pop_protocol:find_block_by_id(Hash, PC),
+		    case R1 of
+			{ok, Block} ->
+			    NetSendFn(SenderAddress, send_full_blocks, {old, [Block]});
+			error ->
+			    erlang:error("unexpected request_full_blocks, unknown hash")
+		    end,
+		    Hash
+	    end,
+
+    lists:map(MapFn, HashList),
+
     PopManager;
 
 on_message(net, _ , send_transactions, TransactionList, PopManager) ->
