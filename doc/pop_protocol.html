@@ -14,23 +14,47 @@
 
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block_in_order-3">add_block_in_order/3</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block-3">add_block/3</a></td><td>Adds block to the structure.</td></tr>
+<tr><td valign="top"><a href="#add_block_in_order-3">add_block_in_order/3</a></td><td>Adds block to blocktree.</td></tr>
+<tr><td valign="top"><a href="#add_transaction-2">add_transaction/2</a></td><td>Adds transaction to the structure.</td></tr>
 <tr><td valign="top"><a href="#apply_block_signature-2">apply_block_signature/2</a></td><td>Inserts signature into the block.</td></tr>
 <tr><td valign="top"><a href="#apply_transaction_signature-2">apply_transaction_signature/2</a></td><td>Inserts signature into the transaction.</td></tr>
-<tr><td valign="top"><a href="#compute_block_hash-1">compute_block_hash/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#compute_transaction_hash-1">compute_transaction_hash/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#compute_block_hash-1">compute_block_hash/1</a></td><td>Computes hash of the block.</td></tr>
+<tr><td valign="top"><a href="#compute_transaction_hash-1">compute_transaction_hash/1</a></td><td>Computes hash of the transaction.</td></tr>
+<tr><td valign="top"><a href="#find_block_by_id-2">find_block_by_id/2</a></td><td>Finds block by id.</td></tr>
 <tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td>Creates next block in the chain for a given verifier.</td></tr>
 <tr><td valign="top"><a href="#get_verfier_next_block_time-2">get_verfier_next_block_time/2</a></td><td>Get the next appropriate time for a verifier to make a block.</td></tr>
-<tr><td valign="top"><a href="#initialize_protocol_data-5">initialize_protocol_data/5</a></td><td>Initialize protocol data.</td></tr>
+<tr><td valign="top"><a href="#init-5">init/5</a></td><td>Initialize protocol data.</td></tr>
 <tr><td valign="top"><a href="#resolve_fork-3">resolve_fork/3</a></td><td>Resolves a fork between two branches.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
+<h3 class="function"><a name="add_block-3">add_block/3</a></h3>
+<div class="spec">
+<p><tt>add_block(Block, CurrentTime, ProtocolData) -&gt; any()</tt></p>
+</div><p><p>Adds block to the structure.</p>
+ 
+  Block can be a duplicate, in which case it is ignored,
+  or it can be an orphan, in which case it is saved
+  to be added later.</p>
+
 <h3 class="function"><a name="add_block_in_order-3">add_block_in_order/3</a></h3>
 <div class="spec">
 <p><tt>add_block_in_order(Block, CurrentTime, ProtocolData) -&gt; any()</tt></p>
-</div>
+</div><p><p>Adds block to blocktree.</p>
+ 
+  The block should new and right after already existing block.
+  Block's structure is checked and error is generated if it is incorrect.</p>
+
+<h3 class="function"><a name="add_transaction-2">add_transaction/2</a></h3>
+<div class="spec">
+<p><tt>add_transaction(T, PD) -&gt; any()</tt></p>
+</div><p><p>Adds transaction to the structure.</p>
+ 
+  Checks transaction correctness first.
+  Returns {Status, Container} where Status is
+  ignored_duplicate, updated_old, added_new</p>
 
 <h3 class="function"><a name="apply_block_signature-2">apply_block_signature/2</a></h3>
 <div class="spec">
@@ -49,12 +73,20 @@
 <h3 class="function"><a name="compute_block_hash-1">compute_block_hash/1</a></h3>
 <div class="spec">
 <p><tt>compute_block_hash(Block) -&gt; any()</tt></p>
-</div>
+</div><p>Computes hash of the block.</p>
 
 <h3 class="function"><a name="compute_transaction_hash-1">compute_transaction_hash/1</a></h3>
 <div class="spec">
 <p><tt>compute_transaction_hash(Transaction) -&gt; any()</tt></p>
-</div>
+</div><p>Computes hash of the transaction.</p>
+
+<h3 class="function"><a name="find_block_by_id-2">find_block_by_id/2</a></h3>
+<div class="spec">
+<p><tt>find_block_by_id(Id, PD) -&gt; any()</tt></p>
+</div><p><p>Finds block by id.</p>
+ 
+  Only looks among non-orphan blocks.
+  Returns {ok, Block} or error.</p>
 
 <h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
 <div class="spec">
@@ -69,9 +101,9 @@
 <p><tt>get_verfier_next_block_time(VerifierIndex, PD) -&gt; any()</tt></p>
 </div><p>Get the next appropriate time for a verifier to make a block.</p>
 
-<h3 class="function"><a name="initialize_protocol_data-5">initialize_protocol_data/5</a></h3>
+<h3 class="function"><a name="init-5">init/5</a></h3>
 <div class="spec">
-<p><tt>initialize_protocol_data(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) -&gt; any()</tt></p>
+<p><tt>init(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) -&gt; any()</tt></p>
 </div><p><p>Initialize protocol data.</p>
  
   Creates a tree with genesis block with a fixed timestamp.

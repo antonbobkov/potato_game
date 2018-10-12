@@ -1,5 +1,6 @@
 %% encoding: UTF-8
 {application,potatoserver}.
-{modules,[blocktree,farmer_server,my_crypto,my_serializer,plantation,
-          pop_protocol,potato_haskell,potato_socket,potatoserver_app,
-          potatoserver_sup,web3]}.
+{modules,[blocktree,farmer_server,my_crypto,my_serializer,
+          pending_transactions,plantation,pop_protocol,potato_haskell,
+          potato_socket,potatoserver_app,potatoserver_sup,supersocket,
+          supersocket_tcplistener,web3]}.
