@@ -1,14 +1,19 @@
-%% @doc Manages network/timer messages and unbound blocks for pop_protocol.
+%% @doc Manages network messages and unbound blocks for pop_protocol.
 %% 
 %% Can run on its own in a loop, but is meant to be extended
 %% to have more structure, to serve as verifier or player.
+%% Those will be implemented in pop_verifier.erl and pop_player.erl
+%% 
+%% This has the code that responds to block requests.
+%% Current idea is that only verifiers should do that,
+%% though it is not inconcievable that players can also
+%% provide that information to each other.
 
 -module(pop_manager).
 
 -export([
 	 new/2,
-	 on_message/4,
-	 on_message/3
+	 on_message/5
 	]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -59,19 +64,15 @@ get_block_status(Hash, PopManager) ->
 	    end
     end.
 
-on_message(net, send_block_hashes, HashList, State) ->
+on_message(net, SenderAddress, send_block_hashes, HashList, State) ->
     State;
-on_message(net, send_full_blocks, {Age, BlockList}, State) ->
+on_message(net, _ , send_full_blocks, {Age, BlockList}, State) ->
     State;
-on_message(net, request_block_hash_range, Range, State) ->
+on_message(net, SenderAddress, request_block_hash_range, Range, State) ->
     State;
-on_message(net, request_full_blocks, HashList, State) ->
+on_message(net, SenderAddress, request_full_blocks, HashList, State) ->
     State;
-on_message(net, send_transactions, TransactionList, State) ->
-    State;
-on_message(net, subscribe, Address, State) ->
-    State.
-on_message(timer, Time, State) ->
+on_message(net, _ , send_transactions, TransactionList, State) ->
     State.
 
 %% @doc starts the loop below
@@ -81,14 +82,14 @@ start_loop(State) ->
 
 loop(State, Tid) ->
     receive 
-	{net, MsgId, Data} ->
-	    NewState = on_message(net, MsgId, Data, State),
+	{net, SenderAddress, MsgId, Data} ->
+	    NewState = on_message(net, SenderAddress, MsgId, Data, State),
 	    loop(NewState, Tid);
-	{timer, Time} ->
-	    NewState = on_message(timer, Time, State),
-	    loop(NewState, Tid);
+	%% {timer, Time} ->
+	%%     NewState = on_message(timer, Time, State),
+	%%     loop(NewState, Tid);
 	exit ->
-	    Tid ! exit,
+	    %% Tid ! exit,
 	    done;
 	Unexpected ->
 	    ?debugVal(Unexpected),
