@@ -1,4 +1,4 @@
--module(pop_protocol).
+-module(pop_chain).
 
 -export([
 	 new/1,
@@ -7,6 +7,7 @@
 	 generate_new_block/2,
 
 	 find_block_by_id/2,
+	 get_genisys_block/1,
 
 	 get_verfier_next_block_time/2,
 	 add_block_in_order/3, 
@@ -224,7 +225,7 @@ add_block_in_order(Block, CurrentTime, ProtocolData)
 %% Creates a tree with genesis block with a fixed timestamp.
 %% Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.
 new(PopConfigData) 
-  when is_record(PopConfigData, pop_config_data)->
+  when is_record(PopConfigData, pop_config_data) ->
 
     CurrentTime = PopConfigData#pop_config_data.init_time,
 
@@ -247,7 +248,8 @@ new(PopConfigData)
     PC = #pop_chain{
 	    pop_config_data = PopConfigData,
 	    tree_data = TD1,
-	    head_block = B1
+	    head_block = B1,
+	    genisys_block = B1
 	   },
     PC.
 
@@ -389,6 +391,11 @@ find_block_by_id(Id, PC)
   when is_record(PC, pop_chain) ->
     maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
 
+%% @doc Gets first block.
+get_genisys_block(PC)
+  when is_record(PC, pop_chain) ->
+    PC#pop_chain.genisys_block.
+    
 
 %% doc Adds block to the structure.
 %% 
