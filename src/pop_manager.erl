@@ -13,7 +13,8 @@
 
 -export([
 	 new/2,
-	 on_net_message/4
+	 on_net_message/5,
+	 loop/1
 	]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -76,6 +77,15 @@ get_nth_prev_block(N, Block, PC) ->
 	    get_nth_prev_block(N-1, get_prev(Block, PC), PC)
     end.
 
+setup_range_request(UnknownBlock, PopManager) ->
+    PC = PopManager#pop_manager.pop_chain,
+    N = PopManager#pop_manager.config#pop_manager_config.request_range_backup,
+
+    KnownBlock1 = pop_chain:get_head_block(PC),
+    KnownBlock2 = get_nth_prev_block(N, KnownBlock1, PC),
+    
+    {maps:get(this_id, KnownBlock1), maps:get(this_id, KnownBlock2), maps:get(this_id, UnknownBlock)}.
+
 %% given unknown block request, and longest known block from another party
 %% make a best guess about which blocks are unknown to the other party
 %% and return a array of hashes of those blocks
@@ -120,11 +130,88 @@ compute_block_hash_range(UnknownBlock, KnownBlock, PC, AccList) ->
 	    compute_block_hash_range(UnknownBlockNew, KnownBlockNew, PC, AccListNew)
     end.
     
-	    
-	    
-    
+%% Adds a new block into pop_chain.
+%% Then it checks unbound blocks, and adds all that become bound.
+%% Function hook on_new_block is triggered on each addition.
 
-on_net_message(SenderAddress, send_block_hashes, HashList, PopManager) ->
+add_block_in_order(Block, CurrentTime, PopManager0) ->
+    PC0 = PopManager0#pop_manager.pop_chain,
+    UnboundMap0 = PopManager0#pop_manager.unbound_blocks,
+
+    OnNewBlockFn = PopManager0#pop_manager.config#pop_manager_config.on_new_block,
+
+    PC1 = pop_chain:add_block_in_order(Block, CurrentTime, PC0),
+
+    OnNewBlockFn(Block),
+
+    %% process unbound blocks, recursively add new ones as needed
+
+    IsUnboundPred = 
+	fun({_Id, B}) ->
+		R = pop_chain:find_block_by_id(maps:get(previous_id, B), PC1),
+		case R of
+		    {ok, _} ->
+			false;
+		    error ->
+			true
+		end
+	end,
+
+    {UnboundList, BoundList} = lists:partition(IsUnboundPred, maps:to_list(UnboundMap0)),
+    
+    UnboundMap1 = maps:from_list(UnboundList),
+
+    PopManager1 = PopManager0#pop_manager{
+		    pop_chain = PC1,
+		    unbound_blocks = UnboundMap1
+		   },
+
+    FoldFn = fun({_Id, NewBlock}, PM) -> add_block_in_order(NewBlock, CurrentTime, PM) end,
+
+    PopManager2 = lists:foldl(FoldFn, PopManager1, BoundList),
+    
+    PopManager2.
+			  
+    
+	    
+%% Processes a new block, either ignoring a duplicate, 
+%% storing it as unbound for later inserting, or inserting it.
+
+add_block_out_of_order(Block, CurrentTime, PopManager) ->
+
+    PC = PopManager#pop_manager.pop_chain,
+    UnboundMap = PopManager#pop_manager.unbound_blocks,
+
+    ThisId = maps:get(this_id, Block),
+    PrevId = maps:get(previous_id, Block),
+
+    R1 = pop_chain:find_block_by_id(ThisId, PC),
+    case R1 of
+	{ok, _} ->
+	    Status = ignored_duplicate;
+	error ->
+	    R2 = pop_chain:find_block_by_id(maps:get(PrevId, Block), PC),
+	    case R2 of
+		{ok, _} ->
+		    Status = added_new;
+		error ->
+		    Status = unbound
+	    end	    
+    end,
+
+    if Status == added_new ->
+	    {Status, add_block_in_order(Block, CurrentTime, PopManager)};
+
+       Status == unbound ->
+	    UnboundMapNew = maps:put(ThisId, Block, UnboundMap),
+	    {Status, PopManager#pop_manager{unbound_blocks = UnboundMapNew}};
+
+       Status == ignored_duplicate ->
+	    {Status, PopManager}
+    end.
+
+
+on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
 
     FilterFn = fun (Hash) -> get_block_status(Hash, PopManager) == unknown end,
@@ -135,10 +222,26 @@ on_net_message(SenderAddress, send_block_hashes, HashList, PopManager) ->
 
     PopManager;
 
-on_net_message(SenderAddress, send_full_blocks, {Age, BlockList}, PopManager) ->
-    PopManager;
+on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, PopManager) ->
+    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
 
-on_net_message(SenderAddress, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) ->
+    FoldFn = 
+	fun(Block, PM) ->
+		BlockStatus = get_block_status(Block, PM),
+
+		if (Age == new) and (BlockStatus == unknown) ->
+			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(Block, PM));
+		   true -> ok
+		end,
+		
+		NewPM = add_block_out_of_order(Block, CurrentTime, PM),
+		NewPM
+	end,
+
+    NewPopManager = lists:foldl(FoldFn, PopManager, BlockList),
+    NewPopManager;
+
+on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
 
     St1 = get_block_status(KnownHash1, PopManager),
@@ -159,7 +262,7 @@ on_net_message(SenderAddress, request_block_hash_range, {KnownHash1, KnownHash2,
 
     PopManager;
 
-on_net_message(SenderAddress, request_full_blocks, HashList, PopManager) ->
+on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
 
@@ -178,7 +281,7 @@ on_net_message(SenderAddress, request_full_blocks, HashList, PopManager) ->
 
     PopManager;
 
-on_net_message(_ , send_transactions, TransactionList, PopManager) ->
+on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
 
     FoldFn = fun (T, PC0) ->
@@ -186,7 +289,7 @@ on_net_message(_ , send_transactions, TransactionList, PopManager) ->
 		     PC1
 	     end,
     
-    NewPC = lists:fold(FoldFn, PC, TransactionList),
+    NewPC = lists:foldl(FoldFn, PC, TransactionList),
 
     PopManager#pop_manager{pop_chain = NewPC}.
 
@@ -194,8 +297,8 @@ on_net_message(_ , send_transactions, TransactionList, PopManager) ->
 
 loop(PopManager) ->
     receive 
-	{net, SenderAddress, MsgId, Data} ->
-	    NewPopManager = on_net_message(SenderAddress, MsgId, Data, PopManager),
+	{net, SenderAddress, CurrentTime, MsgId, Data} ->
+	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
 	    loop(NewPopManager);
 	exit ->
 	    done;

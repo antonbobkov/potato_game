@@ -8,9 +8,9 @@
 
 	 find_block_by_id/2,
 	 get_genisys_block/1,
+	 get_head_block/1,
 
 	 get_verfier_next_block_time/2,
-	 add_block_in_order/3, 
 	 resolve_fork/3,
 
 	 compute_block_hash/1,
@@ -392,45 +392,10 @@ find_block_by_id(Id, PC)
     maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
 
 %% @doc Gets first block.
-get_genisys_block(PC)
-  when is_record(PC, pop_chain) ->
-    PC#pop_chain.genisys_block.
-    
+get_genisys_block(PC) -> PC#pop_chain.genisys_block.
 
-%% doc Adds block to the structure.
-%% 
-%% Block can be a duplicate, in which case it is ignored,
-%% or it can be an orphan, in which case it is saved
-%% to be added later.
-
-
-%% add_block(Block, CurrentTime, ProtocolData)
-%%   when 
-%%       is_record(ProtocolData, pop_chain), 
-%%       is_map(Block)
-%%       ->
-
-%%     %% checks maps for block and transactions inside
-%%     check_block_map_structure(Block),
-
-%%     OrphanMap = ProtocolData#pop_chain.orphan_blocks,
-%%     ThisId = maps:get(this_id, Block),
-%%     PrevId = maps:get(previous_id, Block),
-
-%%     R1 = find_block_by_id(ThisId, ProtocolData),
-%%     case R1 of
-%% 	{ok, _} ->
-%% 	    {ignored_duplicate, ProtocolData};
-%% 	error ->
-%% 	    R2 = find_block_by_id(maps:get(PrevId, Block), ProtocolData),
-%% 	    case R2 of
-%% 		{ok, _} ->
-%% 		    {added_new, add_block_in_order(Block, CurrentTime, ProtocolData)};
-%% 		error ->
-%% 		    OrphanMapNew = maps:put(ThisId, Block, OrphanMap),
-%% 		    {orphan, ProtocolData#pop_chain{orphan_blocks = OrphanMapNew}}
-%% 	    end	    
-%%     end.
+%% @doc Gets last block.
+get_head_block(PC) -> PC#pop_chain.head_block.
 
 %% @doc Adds transaction to the structure.
 %% 
