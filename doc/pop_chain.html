@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module pop_chain</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module pop_chain</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block_in_order-3">add_block_in_order/3</a></td><td>Adds block to blocktree.</td></tr>
+<tr><td valign="top"><a href="#add_transaction-2">add_transaction/2</a></td><td>Adds transaction to the structure.</td></tr>
+<tr><td valign="top"><a href="#apply_block_signature-2">apply_block_signature/2</a></td><td>Inserts signature into the block.</td></tr>
+<tr><td valign="top"><a href="#apply_transaction_signature-2">apply_transaction_signature/2</a></td><td>Inserts signature into the transaction.</td></tr>
+<tr><td valign="top"><a href="#compute_block_hash-1">compute_block_hash/1</a></td><td>Computes hash of the block.</td></tr>
+<tr><td valign="top"><a href="#compute_transaction_hash-1">compute_transaction_hash/1</a></td><td>Computes hash of the transaction.</td></tr>
+<tr><td valign="top"><a href="#find_block_by_id-2">find_block_by_id/2</a></td><td>Finds block by id.</td></tr>
+<tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td>Creates next block in the chain for a given verifier.</td></tr>
+<tr><td valign="top"><a href="#get_genisys_block-1">get_genisys_block/1</a></td><td>Gets first block.</td></tr>
+<tr><td valign="top"><a href="#get_head_block-1">get_head_block/1</a></td><td>Gets last block.</td></tr>
+<tr><td valign="top"><a href="#get_verfier_next_block_time-2">get_verfier_next_block_time/2</a></td><td>Get the next appropriate time for a verifier to make a block.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>Initialize protocol data.</td></tr>
+<tr><td valign="top"><a href="#resolve_fork-3">resolve_fork/3</a></td><td>Resolves a fork between two branches.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_block_in_order-3">add_block_in_order/3</a></h3>
+<div class="spec">
+<p><tt>add_block_in_order(Block, CurrentTime, ProtocolData) -&gt; any()</tt></p>
+</div><p><p>Adds block to blocktree.</p>
+ 
+  The block should new and right after already existing block.
+  Block's structure is checked and error is generated if it is incorrect.</p>
+
+<h3 class="function"><a name="add_transaction-2">add_transaction/2</a></h3>
+<div class="spec">
+<p><tt>add_transaction(T, PC) -&gt; any()</tt></p>
+</div><p><p>Adds transaction to the structure.</p>
+ 
+  Checks transaction correctness first.
+  Returns {Status, Container} where Status is
+  ignored_duplicate, updated_old, added_new</p>
+
+<h3 class="function"><a name="apply_block_signature-2">apply_block_signature/2</a></h3>
+<div class="spec">
+<p><tt>apply_block_signature(Signature, Block) -&gt; any()</tt></p>
+</div><p><p>Inserts signature into the block.</p>
+ 
+  Checks that block's this_id is correct and that signature is correct.</p>
+
+<h3 class="function"><a name="apply_transaction_signature-2">apply_transaction_signature/2</a></h3>
+<div class="spec">
+<p><tt>apply_transaction_signature(Signature, T) -&gt; any()</tt></p>
+</div><p><p>Inserts signature into the transaction.</p>
+ 
+  Checks that the signature is correct.</p>
+
+<h3 class="function"><a name="compute_block_hash-1">compute_block_hash/1</a></h3>
+<div class="spec">
+<p><tt>compute_block_hash(Block) -&gt; any()</tt></p>
+</div><p>Computes hash of the block.</p>
+
+<h3 class="function"><a name="compute_transaction_hash-1">compute_transaction_hash/1</a></h3>
+<div class="spec">
+<p><tt>compute_transaction_hash(Transaction) -&gt; any()</tt></p>
+</div><p>Computes hash of the transaction.</p>
+
+<h3 class="function"><a name="find_block_by_id-2">find_block_by_id/2</a></h3>
+<div class="spec">
+<p><tt>find_block_by_id(Id, PC) -&gt; any()</tt></p>
+</div><p><p>Finds block by id.</p>
+ 
+  Only looks among non-orphan blocks.
+  Returns {ok, Block} or error.</p>
+
+<h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
+<div class="spec">
+<p><tt>generate_new_block(VerifierIndex, PC) -&gt; any()</tt></p>
+</div><p><p>Creates next block in the chain for a given verifier.</p>
+ 
+  Created block is unsigned.
+  (Pending transactions are put into the block by blocktree.)</p>
+
+<h3 class="function"><a name="get_genisys_block-1">get_genisys_block/1</a></h3>
+<div class="spec">
+<p><tt>get_genisys_block(PC) -&gt; any()</tt></p>
+</div><p>Gets first block.</p>
+
+<h3 class="function"><a name="get_head_block-1">get_head_block/1</a></h3>
+<div class="spec">
+<p><tt>get_head_block(PC) -&gt; any()</tt></p>
+</div><p>Gets last block.</p>
+
+<h3 class="function"><a name="get_verfier_next_block_time-2">get_verfier_next_block_time/2</a></h3>
+<div class="spec">
+<p><tt>get_verfier_next_block_time(VerifierIndex, PC) -&gt; any()</tt></p>
+</div><p>Get the next appropriate time for a verifier to make a block.</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(PopConfigData) -&gt; any()</tt></p>
+</div><p><p>Initialize protocol data.</p>
+ 
+  Creates a tree with genesis block with a fixed timestamp.
+  Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.</p>
+
+<h3 class="function"><a name="resolve_fork-3">resolve_fork/3</a></h3>
+<div class="spec">
+<p><tt>resolve_fork(B1, B2, TreeData) -&gt; any()</tt></p>
+</div><p><p>Resolves a fork between two branches.</p>
+ 
+  Block with larger height wins.
+  If heights are the same, then branches are traced to the first branching point,
+  and then block at branching point with earlier timestamp wins.
+  If those timestamps are equal, block with smaller hash wins.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>
