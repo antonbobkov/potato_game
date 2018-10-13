@@ -10,14 +10,9 @@
 <hr>
 
 <h1>Module blocktree</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Blocktree.
+<ul class="index"><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
 
 
-<h2><a name="description">Description</a></h2><p>Blocktree</p>
- 
-  Potential optimization: searches for previous nonce by player can
-  be made faster by caching previous searches. Would speed up
-  add_block_in_order and generate_new_block
 <h2><a name="types">Data Types</a></h2>
 
 <h3 class="typedecl"><a name="type-addresult">addresult()</a></h3>
@@ -38,14 +33,15 @@
 
 <h3 class="typedecl"><a name="type-tx">tx()</a></h3>
 <p><tt>tx() = map()</tt></p>
-<p>  -type txarray() :: array:array(tx()).</p>
+
 
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block_in_order-2">add_block_in_order/2</a></td><td>Adds a new block to the blocktree.</td></tr>
 <tr><td valign="top"><a href="#add_new_transaction-2">add_new_transaction/2</a></td><td>Adds a new transaction to transaction list.</td></tr>
-<tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td>Generates new block after block with PreviousBlockId.</td></tr>
+<tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_all_longest_branches-1">get_all_longest_branches/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_block_by_id-2">get_block_by_id/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#new-0">new/0</a></td><td>Initializes an empty container.</td></tr>
+<tr><td valign="top"><a href="#get_children_block_list-2">get_children_block_list/2</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -78,29 +74,30 @@
 <p><tt>add_new_transaction(Transaction::<a href="#type-tx">tx()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; {<a href="#type-addresult">addresult()</a>, <a href="#type-treedata">treedata()</a>}</tt><br></p>
 </div><p><p>Adds a new transaction to transaction list.</p>
  
-  Called when we get a new transaction from a player.
-  Can do it out of order.
-  Duplicate transactions are ignored, but we can rewrite a transaction
-  with a given nonce by a different transaction with the same nonce.
-  Returns {Status, Container} where Status is
-  ignored_duplicate, updated_old, added_new</p>
+  Can only do so in order.
+  High nonce, and duplicate transactions are ignored.
+  Fails with error if there is a different transaction with the same nonce.
+  This function will be called indirectly from add_block_in_order</p>
 
 <h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
 <div class="spec">
 <p><tt>generate_new_block(PreviousBlockId::<a href="#type-blockid">blockid()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; map()</tt><br></p>
-</div><p><p>Generates new block after block with PreviousBlockId.</p>
- 
-  Puts the appropriate pending transactions inside.</p>
+</div>
+
+<h3 class="function"><a name="get_all_longest_branches-1">get_all_longest_branches/1</a></h3>
+<div class="spec">
+<p><tt>get_all_longest_branches(TreeData::<a href="#type-treedata">treedata()</a>) -&gt; [<a href="#type-block">block()</a>]</tt><br></p>
+</div>
 
 <h3 class="function"><a name="get_block_by_id-2">get_block_by_id/2</a></h3>
 <div class="spec">
 <p><tt>get_block_by_id(Id::<a href="#type-blockid">blockid()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; <a href="#type-block">block()</a></tt><br></p>
 </div>
 
-<h3 class="function"><a name="new-0">new/0</a></h3>
+<h3 class="function"><a name="get_children_block_list-2">get_children_block_list/2</a></h3>
 <div class="spec">
-<p><tt>new() -&gt; <a href="#type-treedata">treedata()</a></tt><br></p>
-</div><p>Initializes an empty container</p>
+<p><tt>get_children_block_list(PrevId::<a href="#type-blockid">blockid()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; [<a href="#type-block">block()</a>]</tt><br></p>
+</div>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>

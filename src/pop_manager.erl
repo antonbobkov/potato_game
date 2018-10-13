@@ -211,8 +211,6 @@ add_block_out_of_order(Block, CurrentTime, PopManager) ->
     end.
 
 
-%% @doc Recieve hashes, request unknown blocks.
-
 on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
 
@@ -223,8 +221,6 @@ on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) ->
     NetSendFn(SenderAddress, request_full_blocks, UnknownHashList),
 
     PopManager;
-
-%% @doc Receive blocks, add them to the structure.
 
 on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
@@ -244,8 +240,6 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 
     NewPopManager = lists:foldl(FoldFn, PopManager, BlockList),
     NewPopManager;
-
-%% @doc Respond to hash range request by computing and sending the range.
 
 on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
@@ -268,8 +262,6 @@ on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHas
 
     PopManager;
 
-%% @doc Respond to block request by sending all the known requested blocks.
-
 on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
@@ -288,8 +280,6 @@ on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) ->
     lists:map(MapFn, HashList),
 
     PopManager;
-
-%% @doc Process the recieved transactions.
 
 on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,

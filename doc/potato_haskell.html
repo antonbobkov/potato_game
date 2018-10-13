@@ -16,7 +16,6 @@
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#for-2">for/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#mapAccumL-3">mapAccumL/3</a></td><td></td></tr>
-<tr><td valign="top"><a href="#unfoldr-2">unfoldr/2</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -30,13 +29,7 @@
 <h3 class="function"><a name="mapAccumL-3">mapAccumL/3</a></h3>
 <div class="spec">
 <p><tt>mapAccumL(Fun, Acc, List) -&gt; {Acc, List}</tt>
-<ul class="definitions"><li><tt>Fun = fun((Acc, Elem::T) -&gt; {Acc, Out})</tt></li><li><tt>Acc = term()</tt></li><li><tt>List = [T]</tt></li><li><tt>Out = term()</tt></li><li><tt>T = term()</tt></li></ul></p>
-</div>
-
-<h3 class="function"><a name="unfoldr-2">unfoldr/2</a></h3>
-<div class="spec">
-<p><tt>unfoldr(Fun, Acc) -&gt; List</tt>
-<ul class="definitions"><li><tt>Fun = fun((Acc) -&gt; Out)</tt></li><li><tt>Out = {Elem::T, Acc} | term()</tt></li><li><tt>List = [T]</tt></li></ul></p>
+<ul class="definitions"><li><tt>Fun = fun((Elem::T, Acc) -&gt; {Acc, Out})</tt></li><li><tt>Acc = term()</tt></li><li><tt>List = [T]</tt></li><li><tt>Out = term()</tt></li><li><tt>T = term()</tt></li></ul></p>
 </div>
 <hr>
 
