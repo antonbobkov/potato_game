@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module blocktree</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module blocktree</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>Blocktree.
+
+
+<h2><a name="description">Description</a></h2><p>Blocktree</p>
+ 
+  Potential optimization: searches for previous nonce by player can
+  be made faster by caching previous searches. Would speed up
+  add_block_in_order and generate_new_block
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-addresult">addresult()</a></h3>
+<p><tt>addresult() = ignore_duplicate | added | ignore_nonce_too_high</tt></p>
+
+
+<h3 class="typedecl"><a name="type-block">block()</a></h3>
+<p><tt>block() = map()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-blockid">blockid()</a></h3>
+<p><tt>blockid() = integer() | undefined</tt></p>
+
+
+<h3 class="typedecl"><a name="type-treedata">treedata()</a></h3>
+<p><tt>treedata() = #tree_data{}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-tx">tx()</a></h3>
+<p><tt>tx() = map()</tt></p>
+<p>  -type txarray() :: array:array(tx()).</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_block_in_order-2">add_block_in_order/2</a></td><td>Adds a new block to the blocktree.</td></tr>
+<tr><td valign="top"><a href="#add_new_transaction-2">add_new_transaction/2</a></td><td>Adds a new transaction to transaction list.</td></tr>
+<tr><td valign="top"><a href="#generate_new_block-2">generate_new_block/2</a></td><td>Generates new block after block with PreviousBlockId.</td></tr>
+<tr><td valign="top"><a href="#get_block_by_id-2">get_block_by_id/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-0">init/0</a></td><td>Initializes an empty container.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_block_in_order-2">add_block_in_order/2</a></h3>
+<div class="spec">
+<p><tt>add_block_in_order(Block::<a href="#type-block">block()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; <a href="#type-treedata">treedata()</a></tt><br></p>
+</div><p><p>Adds a new block to the blocktree.</p>
+ 
+  <p>If successful, it returns updated TreeData.</p>
+ 
+  <p>Fails if:</p>
+ 
+  <ul>
+  <li> can't find previous block</li>
+  <li> this_id is not unique </li>
+  <li> height is incorrect</li>
+  <li> transactions list is incorrect:
+    <ul>
+      <li> Nonces in each list should be in order</li>
+      <li> First nonce in a list should come after the last nonce in the chain for that player</li>
+    </ul>
+  </li>
+  </ul>
+ 
+  Note: genesis block will have previous_id=undefined and height=0</p>
+
+<h3 class="function"><a name="add_new_transaction-2">add_new_transaction/2</a></h3>
+<div class="spec">
+<p><tt>add_new_transaction(Transaction::<a href="#type-tx">tx()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; {<a href="#type-addresult">addresult()</a>, <a href="#type-treedata">treedata()</a>}</tt><br></p>
+</div><p><p>Adds a new transaction to transaction list.</p>
+ 
+  Called when we get a new transaction from a player.
+  Can do it out of order.
+  Duplicate transactions are ignored, but we can rewrite a transaction
+  with a given nonce by a different transaction with the same nonce.
+  Returns {Status, Container} where Status is
+  ignored_duplicate, updated_old, added_new</p>
+
+<h3 class="function"><a name="generate_new_block-2">generate_new_block/2</a></h3>
+<div class="spec">
+<p><tt>generate_new_block(PreviousBlockId::<a href="#type-blockid">blockid()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; map()</tt><br></p>
+</div><p><p>Generates new block after block with PreviousBlockId.</p>
+ 
+  Puts the appropriate pending transactions inside.</p>
+
+<h3 class="function"><a name="get_block_by_id-2">get_block_by_id/2</a></h3>
+<div class="spec">
+<p><tt>get_block_by_id(Id::<a href="#type-blockid">blockid()</a>, TreeData::<a href="#type-treedata">treedata()</a>) -&gt; <a href="#type-block">block()</a></tt><br></p>
+</div>
+
+<h3 class="function"><a name="init-0">init/0</a></h3>
+<div class="spec">
+<p><tt>init() -&gt; <a href="#type-treedata">treedata()</a></tt><br></p>
+</div><p>Initializes an empty container</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>
