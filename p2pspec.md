@@ -21,24 +21,32 @@ Handshake is stateful.
 
 :: Verifier to Verifier/Player ::
 
-- send_blocks [Block]
+- send_block_hashes [Hash]
+  - sends one or more block hashes
+  - this is a response for request block range
+
+- send_full_blocks {new|old}, [Block]
   - sends one or more blocks
-  - those may either be newly mined blocks, or after a request for block information
+  - those may either be newly mined blocks (with new flag), or after a request for blocks (with old flag)
   
 :: Verifier/Player to Verifier::
 
-- request_block_range {MyHead, MyHead - 10, UnknownBlock}
+- request_block_hash_range {MyHead, MyHead - 10, UnknownBlock}
   - requests a range of unknown blocks leading up to UnknownBlock
-  - verifier should respond with send_blocks
+  - verifier should respond with send_block_hashes
   - verifier should calculate a range blocks are missing
   - if verifier doesn't know MyHead and MyHead - 10, the response is ALL the blocks starting from height 0
+
+- request_full_blocks [Hash]
+  - sends a list of hashes that we need to get full blocks for.
+  - expect response with send_blocks
 
 :: Player to Verifier::
 
 - send_transactions [Transaction]
   - sends a list of transactions from a player to a verifier
 
-- subscribe {AddressInfo}
+- subscribe AddressInfo}
   - stateful
   - player subscribes to verifier's messages of newly mined blocks
   - each subscriber is automatically unsubscribed after a minute after subsribe message
