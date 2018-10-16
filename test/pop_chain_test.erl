@@ -1,4 +1,4 @@
--module(pop_protocol_test).
+-module(pop_chain_test).
   
 -include_lib("eunit/include/eunit.hrl").
 
@@ -65,9 +65,9 @@ make_verifier_array() ->
     
 
 generate_block(Index, PrivateKey, PD) ->
-    B0 = pop_protocol:generate_new_block(Index, PD),
+    B0 = pop_chain:generate_new_block(Index, PD),
     Sign = my_crypto:sign(maps:get(this_id, B0), PrivateKey),
-    B1 = pop_protocol:apply_block_signature(Sign, B0),
+    B1 = pop_chain:apply_block_signature(Sign, B0),
     B1.
     
 
@@ -76,10 +76,16 @@ basic_test() ->
 
     CurrentTime = 100,
 
-    PD0 = pop_protocol:init(VerifierArr, 10, 5, hype_chain, CurrentTime),
+    PD0 = pop_chain:new(#pop_config_data{
+			      time_between_blocks = 10, 
+			      time_desync_margin = 5, 
+			      chain_id = hype_chain, 
+			      verifiers_arr = VerifierArr, 
+			      init_time = CurrentTime
+			     }),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD0), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(1, PD0), 110),
+    ?assertEqual(pop_chain:get_verfier_next_block_time(0, PD0), 150),
+    ?assertEqual(pop_chain:get_verfier_next_block_time(1, PD0), 110),
 
     B1 = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110),
     B2 = make_block(genesis, 1, PrivateKey, PublicKey, 2, 120),
@@ -93,7 +99,7 @@ basic_test() ->
     FoldFn = fun(Block, PD) -> 
 		     CD = maps:get(consensus_data, Block),
 		     T = maps:get(timestamp, CD),
-		     pop_protocol:add_block_in_order(Block, T + 1, PD) 
+		     pop_chain:add_block_in_order(Block, T + 1, PD) 
 	     end,
 
     lists:foldl(FoldFn, PD0, [B1]),
@@ -109,17 +115,17 @@ basic_test() ->
 
     PD1 = lists:foldl(FoldFn, PD0, [B2, B4, B1, B3, B5]),
 
-    ?assert(PD1#protocol_data.head_block == B5),
+    ?assert(PD1#pop_chain.head_block == B5),
 
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(0, PD1), 150),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(2, PD1), 170),
-    ?assertEqual(pop_protocol:get_verfier_next_block_time(4, PD1), 190),
+    ?assertEqual(pop_chain:get_verfier_next_block_time(0, PD1), 150),
+    ?assertEqual(pop_chain:get_verfier_next_block_time(2, PD1), 170),
+    ?assertEqual(pop_chain:get_verfier_next_block_time(4, PD1), 190),
 
-    TD = PD1#protocol_data.tree_data,
+    TD = PD1#pop_chain.tree_data,
 
-    ?assert(pop_protocol:resolve_fork(B4, B5, TD) == B5),
-    ?assert(pop_protocol:resolve_fork(B1, B2, TD) == B1),
-    ?assert(pop_protocol:resolve_fork(B3, B4, TD) == B3),
+    ?assert(pop_chain:resolve_fork(B4, B5, TD) == B5),
+    ?assert(pop_chain:resolve_fork(B1, B2, TD) == B1),
+    ?assert(pop_chain:resolve_fork(B3, B4, TD) == B3),
 
 
     ?assertError(_, lists:foldl(FoldFn, PD0, [B3])),
@@ -140,7 +146,7 @@ basic_test() ->
     PDT = lists:foldl(FoldFn, PD0, [B1, B1T]),
 
     MinHash = min(maps:get(this_id, B1), maps:get(this_id, B1T)),
-    HeadHash = maps:get(this_id, PDT#protocol_data.head_block),
+    HeadHash = maps:get(this_id, PDT#pop_chain.head_block),
     ?assertEqual(MinHash, HeadHash),
 
     ok.
@@ -156,13 +162,19 @@ generate_block_test() ->
 
     CurrentTime = 100,
 
-    PD0 = pop_protocol:init(VerifierArr, 10, 5, hype_chain, CurrentTime),
+    PD0 = pop_chain:new(#pop_config_data{
+			      time_between_blocks = 10, 
+			      time_desync_margin = 5, 
+			      chain_id = hype_chain, 
+			      verifiers_arr = VerifierArr, 
+			      init_time = CurrentTime
+			     }),
 
     MakeChainFn = fun(VerifierIndex, PD) -> 
 			  Block = generate_block(VerifierIndex, PrivateKey, PD),
 			  %% io:format(user, "B ~p ~n", [Block]),
 			  %% io:format(user, "~n~n", []),
-			  pop_protocol:add_block_in_order(Block, get_block_cd(timestamp, Block) + 1, PD) 
+			  pop_chain:add_block_in_order(Block, get_block_cd(timestamp, Block) + 1, PD) 
 		  end,
 
     lists:foldl(MakeChainFn, PD0, [1]),

@@ -32,7 +32,7 @@ get_block_transactions(B) ->
 
 
 add_new_transaction_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
 
     T1 = #{nonce => 0, player_id => p1},
     TT1 = #{nonce => 0, player_id => p1, game_data => hi},
@@ -46,7 +46,7 @@ add_new_transaction_test() ->
     ok.
 
 add_empty_genesis_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
     Block = #{previous_id => undefined, this_id => 0, height => 0, transactions => []},
     TD1 = blocktree:add_block_in_order(Block, TD),
 
@@ -61,7 +61,7 @@ add_empty_genesis_test() ->
 %%     maps:fold(fun (_, L, Acc) -> L ++ Acc end, [], M).
 
 add_tr_genesis_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
 
     Block = #{previous_id => undefined, this_id => 0, height => 0,  transactions => []},
     TD1 = blocktree:add_block_in_order(Block, TD),
@@ -84,7 +84,7 @@ make_block(PrevId, ThisId, Height, TrLs) ->
 		   transactions  =>  Transactions}.
 
 add_tr_genesis_2_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
 
     Block = make_block(undefined, hi, 0, [{0, p1}, {0, p2}, {1, p1}]),
 
@@ -102,7 +102,7 @@ add_tr_genesis_2_test() ->
     TD1.
 
 mult_blocks_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
 
     Ba = make_block(undefined, a, 0, [{0, p1}, {0, p2}, {1, p1}]),
     Bb = make_block(a, b, 1, [{1, p2}, {2, p1}, {0, p3}]),
@@ -128,7 +128,7 @@ mult_blocks_test() ->
 
 
 generate_block_gen_test() ->
-    TD0 = blocktree:init(),
+    TD0 = blocktree:new(),
 
     TD1 = add_many_transactions([
 				 {0, p1}, {2, p1}, {3, p1},
@@ -150,7 +150,7 @@ generate_block_gen_test() ->
 
 
 generate_block_mult_seq_test() ->
-    TD = blocktree:init(),
+    TD = blocktree:new(),
 
     L1 = [
 	  {[0,1], p1}, 

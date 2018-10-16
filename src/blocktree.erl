@@ -7,7 +7,7 @@
 -module(blocktree).
 
 -export([
-	 init/0,
+	 new/0,
 	 add_new_transaction/2,
 	 add_block_in_order/2,
 	 generate_new_block/2,
@@ -33,10 +33,10 @@
 -type block() :: map().
 
 %% @doc Initializes an empty container
--spec init() -> treedata().
-init() ->
+-spec new() -> treedata().
+new() ->
     #tree_data{
-       pending_transactions = pending_transactions:init(), 
+       pending_transactions = pending_transactions:new(), 
        block_map = maps:new()
       }.
 

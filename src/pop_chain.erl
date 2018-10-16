@@ -1,15 +1,16 @@
--module(pop_protocol).
+-module(pop_chain).
 
 -export([
-	 init/5,
-	 add_block/3,
+	 new/1,
+	 add_block_in_order/3,
 	 add_transaction/2,
 	 generate_new_block/2,
 
 	 find_block_by_id/2,
+	 get_genisys_block/1,
+	 get_head_block/1,
 
 	 get_verfier_next_block_time/2,
-	 add_block_in_order/3, 
 	 resolve_fork/3,
 
 	 compute_block_hash/1,
@@ -132,18 +133,20 @@ check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) ->
 
 add_block_in_order(Block, CurrentTime, ProtocolData)
   when 
-      is_record(ProtocolData, protocol_data), 
+      is_record(ProtocolData, pop_chain), 
       is_map(Block)
       ->
 
     %% checks maps for block and transactions inside
     check_block_map_structure(Block),
 
-    #protocol_data{
-       verifiers_arr = VerifiersArr, 
-       time_between_blocks = TimeBetween, 
-       time_desync_margin = TimeDesyncMargin,
-       chain_id = MainChainId, 
+    #pop_chain{
+       pop_config_data = #pop_config_data{
+			    verifiers_arr = VerifiersArr, 
+			    time_between_blocks = TimeBetween, 
+			    time_desync_margin = TimeDesyncMargin,
+			    chain_id = MainChainId
+			   },
        tree_data = TD0
       } = ProtocolData,
 
@@ -206,14 +209,14 @@ add_block_in_order(Block, CurrentTime, ProtocolData)
     %% update it, if new block is the last one
 
 
-    CurrentHeadBlock = ProtocolData#protocol_data.head_block,
+    CurrentHeadBlock = ProtocolData#pop_chain.head_block,
     HeadBlock = resolve_fork(Block, CurrentHeadBlock, TD1),
 
     %% ?debugVal(CurrentHeadBlock),
     %% ?debugVal(Block),
     %% ?debugVal(HeadBlock),
 
-    NewProtocolData = ProtocolData#protocol_data{tree_data = TD1, head_block = HeadBlock},
+    NewProtocolData = ProtocolData#pop_chain{tree_data = TD1, head_block = HeadBlock},
 
     NewProtocolData.
 
@@ -221,12 +224,14 @@ add_block_in_order(Block, CurrentTime, ProtocolData)
 %% 
 %% Creates a tree with genesis block with a fixed timestamp.
 %% Genesis block's id is <b>genesis</b>, it is the only block with non SHA hash id.
+new(PopConfigData) 
+  when is_record(PopConfigData, pop_config_data) ->
 
-init(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
+    CurrentTime = PopConfigData#pop_config_data.init_time,
 
     ?assert(CurrentTime >= 0),
 
-    TD0 = blocktree:init(),
+    TD0 = blocktree:new(),
     B0 = blocktree:generate_new_block(undefined, TD0),
     B1 = B0#{
 	     this_id := genesis,
@@ -240,15 +245,13 @@ init(VerifierArr, TimeBetweenBlocks, TimeDesyncMargin, ChainId, CurrentTime) ->
     check_block_map_structure(B1),
     TD1 = blocktree:add_block_in_order(B1, TD0),
 
-    PD = #protocol_data{
-	    verifiers_arr = VerifierArr,
-	    time_between_blocks = TimeBetweenBlocks,
-	    time_desync_margin = TimeDesyncMargin,
-	     chain_id = ChainId,
+    PC = #pop_chain{
+	    pop_config_data = PopConfigData,
 	    tree_data = TD1,
-	    head_block = B1
+	    head_block = B1,
+	    genisys_block = B1
 	   },
-    PD.
+    PC.
 
 %% @doc Resolves a fork between two branches.
 %% 
@@ -319,14 +322,16 @@ resolve_fork_same_parent(B1, B2) ->
 
 %% @doc Get the next appropriate time for a verifier to make a block.
 
-get_verfier_next_block_time(VerifierIndex, PD) 
-  when is_record(PD, protocol_data) ->
+get_verfier_next_block_time(VerifierIndex, PC) 
+  when is_record(PC, pop_chain) ->
 
-    #protocol_data{
-	    verifiers_arr = VerifierArr,
-	    time_between_blocks = TimeBetweenBlocks,
-	    head_block = HeadBlock
-      } = PD,
+    #pop_chain{
+       pop_config_data = #pop_config_data{
+	 verifiers_arr = VerifierArr,
+	 time_between_blocks = TimeBetweenBlocks
+	},
+       head_block = HeadBlock
+      } = PC,
 
     VerNum = array:size(VerifierArr),
     
@@ -346,17 +351,17 @@ get_verfier_next_block_time(VerifierIndex, PD)
 %% Created block is unsigned.
 %% (Pending transactions are put into the block by blocktree.)
 
-generate_new_block(VerifierIndex, PD)
-  when is_record(PD, protocol_data) ->
+generate_new_block(VerifierIndex, PC)
+  when is_record(PC, pop_chain) ->
 
-    Time = get_verfier_next_block_time(VerifierIndex, PD),
+    Time = get_verfier_next_block_time(VerifierIndex, PC),
 
-    TD = PD#protocol_data.tree_data,
+    TD = PC#pop_chain.tree_data,
     
-    VerData = array:get(VerifierIndex, PD#protocol_data.verifiers_arr),
+    VerData = array:get(VerifierIndex, PC#pop_chain.pop_config_data#pop_config_data.verifiers_arr),
     VerPub = VerData#verifier_public_info.public_key,
 
-    LastId = maps:get(this_id, PD#protocol_data.head_block),
+    LastId = maps:get(this_id, PC#pop_chain.head_block),
 
     B0 = blocktree:generate_new_block(LastId, TD),
 
@@ -382,58 +387,28 @@ generate_new_block(VerifierIndex, PD)
 %% Only looks among non-orphan blocks.
 %% Returns {ok, Block} or error.
 
-find_block_by_id(Id, PD)
-  when is_record(PD, protocol_data) ->
-    maps:find(Id, PD#protocol_data.tree_data#tree_data.block_map).
+find_block_by_id(Id, PC)
+  when is_record(PC, pop_chain) ->
+    maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
 
+%% @doc Gets first block.
+get_genisys_block(PC) -> PC#pop_chain.genisys_block.
 
-%% @doc Adds block to the structure.
-%% 
-%% Block can be a duplicate, in which case it is ignored,
-%% or it can be an orphan, in which case it is saved
-%% to be added later.
-
-
-add_block(Block, CurrentTime, ProtocolData)
-  when 
-      is_record(ProtocolData, protocol_data), 
-      is_map(Block)
-      ->
-
-    %% checks maps for block and transactions inside
-    check_block_map_structure(Block),
-
-    OrphanMap = ProtocolData#protocol_data.orphan_blocks,
-    ThisId = maps:get(this_id, Block),
-    PrevId = maps:get(previous_id, Block),
-
-    R1 = find_block_by_id(ThisId, ProtocolData),
-    case R1 of
-	{ok, _} ->
-	    {ignored_duplicate, ProtocolData};
-	error ->
-	    R2 = find_block_by_id(maps:get(PrevId, Block), ProtocolData),
-	    case R2 of
-		{ok, _} ->
-		    {added_new, add_block_in_order(Block, CurrentTime, ProtocolData)};
-		error ->
-		    OrphanMapNew = maps:put(ThisId, Block, OrphanMap),
-		    {orphan, ProtocolData#protocol_data{orphan_blocks = OrphanMapNew}}
-	    end	    
-    end.
+%% @doc Gets last block.
+get_head_block(PC) -> PC#pop_chain.head_block.
 
 %% @doc Adds transaction to the structure.
 %% 
 %% Checks transaction correctness first.
 %% Returns {Status, Container} where Status is 
 %% ignored_duplicate, updated_old, added_new
-add_transaction(T, PD)
-  when is_record(PD, protocol_data),
+add_transaction(T, PC)
+  when is_record(PC, pop_chain),
        is_map(T) ->
     
-    check_transaction_correctness(T, PD#protocol_data.chain_id),
+    check_transaction_correctness(T, PC#pop_chain.pop_config_data#pop_config_data.chain_id),
 
-    TD = PD#protocol_data.tree_data,
+    TD = PC#pop_chain.tree_data,
     {Status, TD1} = blocktree:add_transaction(T, TD),
     
-    {Status, PD#protocol_data{tree_data = TD1} }.
+    {Status, PC#pop_chain{tree_data = TD1} }.

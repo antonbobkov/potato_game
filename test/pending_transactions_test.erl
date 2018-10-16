@@ -17,7 +17,7 @@ fold_transactions(Nonce, Acc) ->
 apply_transactions(TxList, PendingTx) ->
     lists:foldl(fun fold_transactions/2, {PendingTx, dummy}, TxList).
 
-apply_transactions(TxList) -> apply_transactions(TxList, pending_transactions:init()).
+apply_transactions(TxList) -> apply_transactions(TxList, pending_transactions:new()).
 
 get_nonce_counter_list(PlayerId, #pending_tx{player_map = PlMap}) ->
     TxMap = maps:get(PlayerId, PlMap),
