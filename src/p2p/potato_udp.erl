@@ -3,7 +3,7 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
-% state maps {game_id} to game instance PID
+%% state maps {game_id} to game instance PID
 -spec init(integer()) -> {ok, map()}.
 init(Port) ->
   io:format("gen_udp open on port: ~p~n", [Port]),
@@ -22,6 +22,8 @@ handle_cast({add,Key,Pid}, S) ->
   {noreply, {Socket, Map2}};
 
 %% TODO probably create verifier type that holds address/port
+%% consider adding {validator -> address} mapping as well
+%% and then this function will handle formatting the message
 handle_cast({send, Address, Port, Msg}, S) ->
   {Socket, _} = S,
   gen_udp:send(Socket, Address, Port, Msg),
@@ -30,12 +32,16 @@ handle_cast({send, Address, Port, Msg}, S) ->
 %% TODO log errors or whatever.
 handle_info({udp, _Socket, _IP, _InPortNo, Packet}, S) ->
   io:format("got: ~p~n", [Packet]),
-  %% TODO unpack binary info
-  %% get address
-  %% find {game_id} in map
-  %% if found, pass message on
-  %% maybe remove from set if message could not be sent?
-  {noreply, S};
+  case messages:unpack(Packet) of
+    fail ->
+      io:format("received garbage packet ~p~n", [Packet]),
+      {noreply, S};
+    {_GameId, _Data} ->
+      %% find {game_id} in map
+      %% if found, pass message on
+      %% maybe remove from set if message could not be passed on (i.e. game died)?
+      {noreply, S}
+  end;
 
 handle_info(E, S) ->
   io:format("unexpected: ~p~n", [E]),
