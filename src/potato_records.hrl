@@ -9,6 +9,13 @@
 -record(pop_manager_config, {request_range_backup, net_send, on_new_block}).
 -record(pop_manager, {unbound_blocks, pop_chain, config}).
 
+-record(validator,
+  {gameid :: integer(),
+  pubkey :: public_key:public_key(),
+  address :: {string(), integer()}}).
+
+
+
 %% These are handled by maps rather than records
 -define(block, [previous_id, this_id, height, transactions, consensus_data]).
 -define(consensus_block_data, [signature, verifier_pub_key, verifier_index, timestamp]).

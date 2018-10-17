@@ -4,7 +4,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 %% state maps {game_id} to game instance PID
--spec init(integer()) -> {ok, map()}.
+-spec init(integer()) -> {ok, {gen_udp:socket(), map()}}.
 init(Port) ->
   io:format("gen_udp open on port: ~p~n", [Port]),
   {ok, Socket} = gen_udp:open(Port, [binary, {active,true}]),
@@ -16,10 +16,12 @@ handle_call(_E, _From, S) ->
   {noreply, S}.
 
 %% add a {game_id} => Pid to map
-handle_cast({add,Key,Pid}, S) ->
+handle_cast({add_game,Key,Pid}, S) ->
   {Socket, Map} = S,
   Map2 = maps:put(Key, Pid, Map),
   {noreply, {Socket, Map2}};
+
+%%handle_cast({remove_game,Key}, S) ->
 
 %% TODO probably create verifier type that holds address/port
 %% consider adding {validator -> address} mapping as well
