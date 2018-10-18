@@ -16,8 +16,7 @@ handle_call(_E, _From, S) ->
   {noreply, S}.
 
 %% add a {game_id} => Pid to map
-handle_cast({add_game,Key,Pid}, S) ->
-  {Socket, Map} = S,
+handle_cast({add_game,Key,Pid}, {Socket, Map}) ->
   Map2 = maps:put(Key, Pid, Map),
   {noreply, {Socket, Map2}};
 
