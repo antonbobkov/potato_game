@@ -65,7 +65,7 @@ get_block_status(Hash, PopManager) ->
 
 %% get previous block
 get_prev(Block, PC) ->
-    {ok, Prev} = pop_chain:find_block_by_id(maps:get(prev_id, Block), PC),
+    {ok, Prev} = pop_chain:find_block_by_id(maps:get(previous_id, Block), PC),
     Prev.
 
 %% get n'th previous block, stop at genisys block
@@ -190,7 +190,7 @@ add_block_out_of_order(Block, CurrentTime, PopManager) ->
 	{ok, _} ->
 	    Status = ignored_duplicate;
 	error ->
-	    R2 = pop_chain:find_block_by_id(maps:get(PrevId, Block), PC),
+	    R2 = pop_chain:find_block_by_id(PrevId, PC),
 	    case R2 of
 		{ok, _} ->
 		    Status = added_new;
@@ -211,7 +211,7 @@ add_block_out_of_order(Block, CurrentTime, PopManager) ->
     end.
 
 
-%% @doc Recieve hashes, request unknown blocks.
+%% @doc Receive hashes, request unknown blocks.
 
 on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) ->
     NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
@@ -238,7 +238,7 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 		   true -> ok
 		end,
 		
-		NewPM = add_block_out_of_order(Block, CurrentTime, PM),
+		{_Status, NewPM} = add_block_out_of_order(Block, CurrentTime, PM),
 		NewPM
 	end,
 
@@ -289,7 +289,7 @@ on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) ->
 
     PopManager;
 
-%% @doc Process the recieved transactions.
+%% @doc Process the received transactions.
 
 on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
