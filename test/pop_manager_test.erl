@@ -115,6 +115,15 @@ extract_new_block_messages() ->
 	    []
     end.
 
+no_more_messages() ->
+    receive
+	_Any ->
+	    false
+    after 0 -> 
+	    true
+    end.
+    
+
 fancy_test() ->
     PM = make_pm(),
     PC = PM#pop_manager.pop_chain,
@@ -144,6 +153,7 @@ fancy_test() ->
 
     ?assertEqual(PM_Bm, PM_B),
 
+    ?assert(no_more_messages()),
 
 
     %% Test on_net_message send_full_blocks in order
@@ -152,6 +162,7 @@ fancy_test() ->
 
     ?assertEqual(get_hashes([C1, C2, C3, C4, C5]), extract_new_block_messages()),
 
+    ?assert(no_more_messages()),
 
 
     %% Test on_net_message send_full_blocks out of order with repeats
@@ -170,6 +181,7 @@ fancy_test() ->
 
     ?assertEqual(C5, pop_chain:get_head_block(PM_BC#pop_manager.pop_chain)),
 
+    ?assert(no_more_messages()),
 
 
     %% Test on_net_message send_full_blocks new unknown block
@@ -178,6 +190,8 @@ fancy_test() ->
     ?assertEqual(maps:size(PM_B_C5#pop_manager.unbound_blocks), 1),
 
     ?assertEqual({net, request_block_hash_range, get_hashes_tuple([B4, B1, C5])}, extract_message()),
+
+    ?assert(no_more_messages()),
 
     ok.
 
