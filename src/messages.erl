@@ -10,13 +10,11 @@ pack(GameId, Data) ->
   term_to_binary({GameId, Data}).
 
 unpack(Binary) ->
-  try
-    case binary_to_term(Binary) of
-      %% TODO do more validation on data
-      {GameId, Data} when is_integer(GameId) ->
-        {GameId, Data};
-      _ -> fail
-    end
-  catch
+  try binary_to_term(Binary) of
+    %% TODO do more validation on data
+    {GameId, Data} when is_integer(GameId) ->
+      {GameId, Data};
     _ -> fail
+  catch
+    error:badarg -> fail
   end.

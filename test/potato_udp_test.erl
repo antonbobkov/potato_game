@@ -8,5 +8,6 @@ potato_udp_test() ->
   {ok, Pid} = gen_server:start(potato_udp, Port, []),
   %% ?debugFmt("started potato_udp gen_server ~p~n",[Pid]),
   gen_server:cast(Pid, {send, "localhost", Port, "hi"}),
+  timer:sleep(200),
   ok = gen_server:stop(Pid).
   %% TODO better tests
