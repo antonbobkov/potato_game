@@ -4,6 +4,8 @@
 
 -export([hash/1, sign/2, verify/3, read_file_key/2]).
 
+%% -define(MY_CRYPTO_DEBUG, true).
+
 %% Actual function implementations
 
 hash_full(Bin) -> crypto:hash(sha256, Bin).
@@ -32,7 +34,7 @@ hash_debug(Bin) ->
     Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
 
     %% Copied this online :cat_scream:
-    HexString = [io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Part ],
+    HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Part ]),
 
     HexString.
 

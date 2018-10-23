@@ -62,9 +62,8 @@ dump_all_messages() ->
 	    done
     end.
 
-basic_test() ->
-    ?debugVal(my_crypto:hash("hi")),
 
+basic_test() ->
     {PM, PrivateKey, _PublicKey} = make_pm(),
     
     PC = PM#pop_manager.pop_chain,
