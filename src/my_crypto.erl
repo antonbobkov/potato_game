@@ -4,7 +4,7 @@
 
 -export([hash/1, sign/2, verify/3, read_file_key/2]).
 
-%% -define(MY_CRYPTO_DEBUG, true).
+-define(MY_CRYPTO_DEBUG, true).
 
 %% Actual function implementations
 

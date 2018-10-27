@@ -409,6 +409,6 @@ add_transaction(T, PC)
     check_transaction_correctness(T, PC#pop_chain.pop_config_data#pop_config_data.chain_id),
 
     TD = PC#pop_chain.tree_data,
-    {Status, TD1} = blocktree:add_transaction(T, TD),
+    {Status, TD1} = blocktree:add_new_transaction(T, TD),
     
     {Status, PC#pop_chain{tree_data = TD1} }.

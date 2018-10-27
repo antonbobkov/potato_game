@@ -92,8 +92,8 @@ setup_range_request(UnknownBlock, PopManager) ->
 
 compute_block_hash_range(UnknownBlockHash, KnownBlockHash, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
-    UnknownBlock = pop_chain:find_block_by_id(UnknownBlockHash, PC),
-    KnownBlock = pop_chain:find_block_by_id(KnownBlockHash, PC),
+    {ok, UnknownBlock} = pop_chain:find_block_by_id(UnknownBlockHash, PC),
+    {ok, KnownBlock} = pop_chain:find_block_by_id(KnownBlockHash, PC),
 
     compute_block_hash_range(UnknownBlock, KnownBlock, PC, []).
 
@@ -177,7 +177,7 @@ add_block_in_order(Block, CurrentTime, PopManager0) ->
 %% Processes a new block, either ignoring a duplicate, 
 %% storing it as unbound for later inserting, or inserting it.
 
-add_block_out_of_order(Block, CurrentTime, PopManager) ->
+add_block_any_order(Block, CurrentTime, PopManager) ->
 
     PC = PopManager#pop_manager.pop_chain,
     UnboundMap = PopManager#pop_manager.unbound_blocks,
@@ -238,7 +238,7 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 		   true -> ok
 		end,
 		
-		{_Status, NewPM} = add_block_out_of_order(Block, CurrentTime, PM),
+		{_Status, NewPM} = add_block_any_order(Block, CurrentTime, PM),
 		NewPM
 	end,
 

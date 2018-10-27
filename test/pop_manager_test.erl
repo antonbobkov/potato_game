@@ -121,6 +121,17 @@ extract_new_block_messages() ->
 	    []
     end.
 
+extract_send_full_blocks() ->
+    receive
+	{net, send_full_blocks, {old, [Block]}} -> 
+	    [Block | extract_send_full_blocks()];
+	_Any ->
+	    fail
+    after 0 -> 
+	    []
+    end.
+    
+
 no_more_messages() ->
     receive
 	_Any ->
@@ -128,14 +139,35 @@ no_more_messages() ->
     after 0 -> 
 	    true
     end.
+
+make_transaction(PrivateKey, PublicKey, Nonce, ChainId) ->
+    T0 = #{
+	   game_data => undefined,
+	   nonce => Nonce,
+	   player_id => PublicKey,
+	   consensus_data => #{
+			       signature => undefined,
+			       chain_id => ChainId
+			      }
+	  },
+    Hash = my_crypto:hash(my_serializer:serialize_object(T0)),
+    Signature = my_crypto:sign(Hash, PrivateKey),
+    CD = maps:get(consensus_data, T0),
+    T1 = T0#{
+	     consensus_data := CD#{signature := Signature}
+	    },
+
+    T1.
     
 
 fancy_test() ->
-    {PM, PrivateKey, _PublicKey} = make_pm(),
+    {PM, PrivateKey, PublicKey} = make_pm(),
     PC = PM#pop_manager.pop_chain,
     Time = 2000,
 
     A0 = pop_chain:get_head_block(PC),
+
+    ?assertEqual(maps:get(this_id, A0), genesis),
 
     generate_chain(PC, 1, 0, PrivateKey),
 
@@ -145,13 +177,24 @@ fancy_test() ->
 
     {PC_C, [C1, C2, C3, C4, C5]} = generate_chain(PC_A, 5, 1, PrivateKey),
 
+    %% We have constructed test chain:
+    %% 
+    %%                B1 - B2 - B3 - B4
+    %%              /
+    %% A0 - A1 - A2 
+    %%              \
+    %%                C1 - C2 - C3 - C4 - C5
+    %% 
+
+
     PM_B = PM#pop_manager{pop_chain = PC_B},
+    PM_C = PM#pop_manager{pop_chain = PC_C},
 
     ?assertEqual(B4, pop_chain:get_head_block(PM_B#pop_manager.pop_chain)),
 
 
 
-    %% Test on_net_message send_block_hashes
+    %% Test send_block_hashes
 
     PM_Bm = pop_manager:on_net_message(self(), Time, send_block_hashes, get_hashes([A2, C3, B4, C1]), PM_B),
 
@@ -162,7 +205,7 @@ fancy_test() ->
     ?assert(no_more_messages()),
 
 
-    %% Test on_net_message send_full_blocks in order
+    %% Test send_full_blocks in order
 
     PM_BC = pop_manager:on_net_message(self(), Time, send_full_blocks, {old, [C1, C2, C3, C4, C5]}, PM_B),
 
@@ -171,7 +214,7 @@ fancy_test() ->
     ?assert(no_more_messages()),
 
 
-    %% Test on_net_message send_full_blocks out of order with repeats
+    %% Test send_full_blocks out of order with repeats
 
     PM_BC0 = pop_manager:on_net_message(self(), Time, send_full_blocks, {old, [C2, C3]}, PM_B),
 
@@ -190,7 +233,8 @@ fancy_test() ->
     ?assert(no_more_messages()),
 
 
-    %% Test on_net_message send_full_blocks new unknown block
+    %% Test send_full_blocks new unknown block
+
     PM_B_C5 = pop_manager:on_net_message(self(), Time, send_full_blocks, {new, [C5]}, PM_B),
 
     ?assertEqual(maps:size(PM_B_C5#pop_manager.unbound_blocks), 1),
@@ -198,6 +242,53 @@ fancy_test() ->
     ?assertEqual({net, request_block_hash_range, get_hashes_tuple([B4, B1, C5])}, extract_message()),
 
     ?assert(no_more_messages()),
+
+    %% Test request_block_hash_range
+
+    ReqHashRangeTestFn = 
+	fun(RequestList, State, ResultList) ->
+		StateM = pop_manager:on_net_message(self(), Time, request_block_hash_range, get_hashes_tuple(RequestList), State),
+
+		?assertEqual(StateM, State),
+
+		?assertEqual({net, send_block_hashes, get_hashes(ResultList)}, extract_message()),
+
+		?assert(no_more_messages())
+	end,
+
+    %% C5 is known
+    ReqHashRangeTestFn([C5, C5, B4], PM_BC, [B1, B2, B3, B4]),
+    
+    %% B4 unknown, A1 is known
+    ReqHashRangeTestFn([B4, A1, C2], PM_C, [A2, C1, C2]),
+
+    %% B4 unknown, B3 unknown
+    ReqHashRangeTestFn([B4, B3, C1], PM_C, [A1, A2, C1]),
+
+    %% Test request_full_blocks
+
+    L = [A2, B3, C4, C1],
+    HL = get_hashes(L),
+
+    PM_BC_rfb = pop_manager:on_net_message(self(), Time, request_full_blocks, HL, PM_BC),
+
+    ?assertEqual(PM_BC_rfb, PM_BC),
+
+    R = extract_send_full_blocks(),
+    HR = get_hashes(R),
+
+    ?assertEqual(HL, HR),
+    ?assertEqual(L, R),
+
+    ?assert(no_more_messages()),
+
+    %% Test send_transactions
+
+    Tr = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
+
+    PM_BC_st = pop_manager:on_net_message(self(), Time, send_transactions, [Tr], PM_BC),
+
+    ?assertNotEqual(PM_BC_st, PM_BC),
 
     ok.
 
