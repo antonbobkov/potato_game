@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/my_crypto.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/my_crypto.erl by COVER 2018-10-27 at 19:57:10
+
+****************************************************************************
+
+        |  -module(my_crypto).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  
+        |  -export([hash/1, sign/2, verify/3, read_file_key/2]).
+        |  
+        |  -define(MY_CRYPTO_DEBUG, true).
+        |  
+        |  %% Actual function implementations
+        |  
+     1..|  hash_full(Bin) -&gt; crypto:hash(sha256, Bin).
+        |  
+     2..|  sign_full(Hash, PrivateKey) -&gt; public_key:sign(Hash, none, PrivateKey).
+        |  
+     3..|  verify_full(Hash, Signature, PubKey) -&gt; public_key:verify(Hash, none, Signature, PubKey).
+        |  
+        |  read_file_key_full(private, FileName) -&gt;
+     2..|      {ok, PemBin} = file:read_file(FileName),
+     2..|      [RSAEntry] = public_key:pem_decode(PemBin),
+     2..|      Key = public_key:pem_entry_decode(RSAEntry),
+     2..|      Key;
+        |  
+        |      
+        |  read_file_key_full(public, FileName) -&gt;
+     2..|      {ok, Bin} = file:read_file(FileName),
+     2..|      [{Key, _}] = public_key:ssh_decode(Bin, public_key),
+     2..|      Key.
+        |  
+        |  %% Debugging simplified functions
+        |  
+        |  %% cut hash down to three bytes
+        |  hash_debug(Bin) -&gt; 
+   130..|      Full = crypto:hash(sha256, Bin),
+   130..|      Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
+        |  
+        |      %% Copied this online :cat_scream:
+   130..|      HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || &lt;&lt;X:8&gt;&gt; &lt;= Part ]),
+        |  
+   130..|      HexString.
+        |  
+        |  drop_ext(FileName) -&gt;
+   134..|      [Out | _] = string:split(FileName, "."),
+   134..|      Out.
+        |  
+   134..|  sign_debug(Hash, AnyKey) -&gt; Hash ++ " " ++ drop_ext(AnyKey).
+    92..|  verify_debug(Hash, Signature, PublicKey) -&gt; Signature == sign_debug(Hash, PublicKey).
+     6..|  read_file_key_debug(private, FileName) -&gt; FileName;
+     6..|  read_file_key_debug(public, FileName) -&gt; FileName.
+        |  
+        |  -ifdef(MY_CRYPTO_DEBUG).
+        |  
+   129..|  hash(Bin) -&gt; hash_debug(Bin).
+    40..|  sign(Hash, PrivateKey) -&gt; sign_debug(Hash, PrivateKey).
+    89..|  verify(Hash, Signature, PubKey) -&gt; verify_debug(Hash, Signature, PubKey).
+     4..|  read_file_key(private, FileName) -&gt; read_file_key_debug(private, FileName);
+     4..|  read_file_key(public, FileName) -&gt; read_file_key_debug(public, FileName).
+        |  
+        |  -else.
+        |  
+        |  hash(Bin) -&gt; hash_full(Bin).
+        |  sign(Hash, PrivateKey) -&gt; sign_full(Hash, PrivateKey).
+        |  verify(Hash, Signature, PubKey) -&gt; verify_full(Hash, Signature, PubKey).
+        |  read_file_key(private, FileName) -&gt; read_file_key_full(private, FileName);
+        |  read_file_key(public, FileName) -&gt; read_file_key_full(public, FileName).
+        |  
+        |  -endif.
+        |  
+        |  %% -spec hash(iodata()) -&gt; binary().
+        |  %% -spec sign(binary(), public_key:private_key()) -&gt; binary().
+        |  %% -spec verify(binary(), binary(), public_key:public_key()) -&gt; boolean().
+        |  %% -spec read_file_key(private, string()) -&gt; _.
+        |  
+        |  my_crypto_test() -&gt;
+     1..|      my_crypto_test_gen(fun hash_debug/1, fun sign_debug/2, fun verify_debug/3, fun read_file_key_debug/2),
+     1..|      my_crypto_test_gen(fun hash_full/1, fun sign_full/2, fun verify_full/3, fun read_file_key_full/2),
+        |  
+     1..|      ok.
+        |  
+        |  my_crypto_test_gen(HashFn, SignFn, VerifyFn, ReadFn) -&gt;
+        |      % HASH
+        |  
+     2..|      Message = "hi",
+     2..|      BinMessage = list_to_binary(Message),
+     2..|      MessageHash = HashFn(BinMessage),
+        |      %% _ = binary_to_list(MessageHash),
+        |      %% io:format("string ~p hash_sz: ~p hash: ~p ~n", [Message, length(L), L]),
+        |  
+        |      % RSA PRIVATE
+     2..|      Key = ReadFn(private, "key1.prv"),
+        |  
+        |      % RSA PUBLIC
+     2..|      PubKey = ReadFn(public, "key1.pub"),
+        |  
+        |      %% io:format("rsa private key ~p~n", [Key]),
+        |  
+     2..|      Signature = SignFn(MessageHash, Key),
+     2..|      VerifyResult = VerifyFn(MessageHash, Signature, PubKey),
+        |  
+     2..|      ?assertEqual(VerifyResult, true, "verify didn't work"),
+        |  
+     2..|      Key2 = ReadFn(private, "key2.prv"),
+     2..|      PubKey2 = ReadFn(public, "key2.pub"),
+        |  
+     2..|      Signature2 = SignFn(MessageHash, Key2),
+     2..|      ?assertEqual(VerifyFn(MessageHash, Signature, PubKey2), false, "verify shouldn't have worked"),
+     2..|      ?assertEqual(VerifyFn(MessageHash, Signature2, PubKey), false, "verify shouldn't have worked"),
+        |  
+        |      %% io:format("signature ~p verify ~p ~n", [Signature, VerifyResult]),
+        |      %% [Key, PubKey].
+     2..|      ok.
+        |  
+        |  
+</pre>
+</body>
+</html>

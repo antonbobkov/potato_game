@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/pending_transactions.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pending_transactions.erl by COVER 2018-10-27 at 19:57:10
+
+****************************************************************************
+
+        |  %% @doc container handling pending transactions.
+        |  %% 
+        |  %% Transactions can come out of order.
+        |  %% Newer transactions rewrite older ones.
+        |  %% This structure allows purge of old transactions,
+        |  %% to control the size of the buffer, however,
+        |  %% it is not implemented here.
+        |  %% 
+        |  %% Also, as implemented, there is a replay attack where a two user's transactions
+        |  %% with same nonces are kept being sent alternatively, forcing that user's
+        |  %% transactions in the end. This can be fixed by having the user 
+        |  %% send timestamp with his transactions and then only rewrite transactions
+        |  %% for which timestamp goes up.
+        |  %% (or implement handshake to prevent replays)
+        |  
+        |  -module(pending_transactions).
+        |  
+        |  -export([
+        |  	 new/0,
+        |  	 add_transaction/2,
+        |  	 get_pending_players/1,
+        |  	 get_pending_transactions/2
+        |  	]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  
+        |  -include("potato_records.hrl").
+        |  
+        |  %% @doc Initialize the container.
+        |  
+        |  new() -&gt;
+    24..|      #pending_tx{player_map = maps:new(), counter = 0}.
+        |  
+        |  %% update Pending Transaction container with a new counter and a new transaction map for a player
+        |  
+        |  update_container(PlayerId, TxMp, NewCounter, PendingTx) -&gt; 
+        |      %% erlang too hard
+        |  
+    64..|      PM = (PendingTx#pending_tx.player_map)#{PlayerId =&gt; TxMp},
+        |      
+    64..|      PendingTx#pending_tx{player_map = PM, counter = NewCounter}.
+        |  
+        |  
+        |  %% udpate a counter at a TxMap[Nonce] and return modified map and incremented counter
+        |  
+        |  update_counter_at_nonce(Nonce, {Counter, TxMap}) -&gt;
+    88..|      {_OldCounter, Data} = maps:get(Nonce, TxMap),
+    88..|      TxMapNew = maps:put(Nonce, {Counter, Data}, TxMap),
+    88..|      {Counter + 1, TxMapNew}.
+        |  
+        |  
+        |  
+        |  %% update counters in order at all nonces in TxMap starting at NonceStart
+        |  
+        |  update_all_the_counters(NonceStart, Counter, TxMap) -&gt; 
+        |  
+    64..|      NonceList = lists:sort(lists:filter(fun (N) -&gt; N &gt;= NonceStart end, maps:keys(TxMap))),
+        |      
+    64..|      {CounterNew, TxMapNew} = lists:foldl(fun update_counter_at_nonce/2, {Counter, TxMap}, NonceList),
+    64..|      {CounterNew, TxMapNew}.
+        |  
+        |  %% inserts transaction into the map and updates all counters at nonces &gt;= Nonce
+        |  
+        |  insert_transaction(Nonce, Transaction, Counter, TxMap0) -&gt;
+    64..|      TxMap1 = maps:put(Nonce, {tmp_counter, Transaction}, TxMap0),
+    64..|      {CounterNew, TxMap2} = update_all_the_counters(Nonce, Counter, TxMap1),
+    64..|      {CounterNew, TxMap2}.
+        |  
+        |  %% @doc Adds new transaction to the container. 
+        |  %% 
+        |  %% Updates counters on later transactions.
+        |  %% Returns {Container, message} where message is 
+        |  %% ignored_duplicate, updated_old, added_new
+        |  
+        |  
+        |  add_transaction(Transaction, PendingTx)
+        |    when is_record(PendingTx, pending_tx), 
+        |         is_map(Transaction) -&gt;
+        |      #{
+        |        player_id := PlayerId,
+        |        nonce := Nonce
+    72..|       } = Transaction,
+        |  
+        |      #pending_tx{
+        |         player_map = PlMap, 
+        |         counter = Counter
+    72..|        } = PendingTx,
+        |  
+        |      %% find player by id; if doesn't exist, add them
+    72..|      case maps:find(PlayerId, PlMap) of 
+        |  	{ok, TxMap} -&gt;
+    50..|  	    ok;
+        |  
+        |  	error -&gt;
+    22..|  	    TxMap = maps:new()
+        |      end,
+        |  
+        |      %% ?debugVal(Nonce),
+        |      %% ?debugVal(TxMap),
+        |      %% ?debugVal(maps:find(Nonce, TxMap)),
+        |      
+        |      %% find transaction by nonce
+    72..|      case maps:find(Nonce, TxMap) of 
+        |  	{ok, {_, T_old}} -&gt;
+        |  	    %% if it exists, see if we need to update it
+    12..|  	    if T_old == Transaction -&gt;
+     8..|  		    Status = ignored_duplicate;
+        |  
+        |  	       T_old /= Transaction -&gt;
+     4..|  		    Status = updated_old
+        |  	    end,	    
+    12..|  	    ok;
+        |  	error -&gt;
+    60..|  	    Status = added_new
+        |      end,
+        |  
+    72..|      if Status == ignored_duplicate -&gt;
+     8..|  	    {PendingTx, Status};
+        |         Status /= ignored_duplicate -&gt;
+    64..|  	    {CounterNew, TxMapNew} = insert_transaction(Nonce, Transaction, Counter, TxMap),
+        |  
+    64..|  	    {update_container(PlayerId, TxMapNew, CounterNew, PendingTx), Status}
+        |      end.
+        |      
+        |  
+        |  %% @doc Get list of all the players for which there are pending transactions.
+        |  
+        |  get_pending_players(#pending_tx{player_map = PlMap}) -&gt;
+    38..|      maps:keys(PlMap).
+        |  
+        |  %% @doc Returns pending transactions in the correct order.
+        |  %% 
+        |  %% For each player P, transactions will start at PlayersStartingNonceMap[P]
+        |  %% and will have consecutive nonces (no gaps).
+        |  %% 
+        |  %% Transactions for players not in PlayersStartingNonceMap will be ignored.
+        |  
+        |  get_pending_transactions(PlayersStartingNonceMap, PendingTx) 
+        |    when is_map(PlayersStartingNonceMap),
+        |         is_record(PendingTx, pending_tx) 
+        |         -&gt;
+        |  
+    40..|      PlMap = PendingTx#pending_tx.player_map,
+        |  
+        |      %% (Key, Value, Acc) applied to PlMap
+    40..|      FoldFn = fun (PlayerId, TxMap, TransactionListAcc) -&gt;
+    17..|  		     R = maps:find(PlayerId, PlayersStartingNonceMap),
+    17..|  		     case R of
+        |  			 {ok, StartingNonce} -&gt; 
+    17..|  			     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc);
+        |  			 error -&gt; 
+        |  			     %% ignore players not in PlayersStartingNonceMap
+        |  
+<font color=red>     0..|  			     TransactionListAcc</font>
+        |  		     end
+        |  	     end,
+        |  
+        |      % unsorted list of tuples {Counter, Transaction}
+    40..|      TransactionList = maps:fold(FoldFn, [], PlMap),
+        |  
+        |  
+    40..|      TupleCompareFn = fun({Counter1, _}, {Counter2, _}) -&gt; Counter1 =&lt; Counter2 end,
+    40..|      TupleMapFn = fun({_, Transaction}) -&gt; Transaction end,
+        |  
+    40..|      lists:map(TupleMapFn, lists:sort(TupleCompareFn, TransactionList)).
+        |  
+        |  %% extracts transactions from a player, in sequential order, starting at Nonce
+        |  collect_transactions_from_player(TxMap, Nonce, TransactionListAcc) -&gt;
+    45..|      R = maps:find(Nonce, TxMap),
+    45..|      case R of
+        |  	{ok, TxData} -&gt; 
+        |  	    %% insert TxData, increment Nonce
+    28..|  	    collect_transactions_from_player(TxMap, Nonce + 1, [TxData | TransactionListAcc]);
+        |  	error -&gt; 
+        |  	    %% done
+    17..|  	    TransactionListAcc
+        |      end.
+</pre>
+</body>
+</html>

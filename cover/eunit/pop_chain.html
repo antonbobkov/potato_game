@@ -1,0 +1,428 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/pop_chain.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_chain.erl by COVER 2018-10-27 at 19:57:10
+
+****************************************************************************
+
+        |  -module(pop_chain).
+        |  
+        |  -export([
+        |  	 new/1,
+        |  	 add_block_in_order/3,
+        |  	 add_transaction/2,
+        |  	 generate_new_block/2,
+        |  
+        |  	 find_block_by_id/2,
+        |  	 get_genisys_block/1,
+        |  	 get_head_block/1,
+        |  
+        |  	 get_verfier_next_block_time/2,
+        |  	 resolve_fork/3,
+        |  
+        |  	 compute_block_hash/1,
+        |  	 compute_transaction_hash/1,
+        |  
+        |  	 apply_block_signature/2,
+        |  	 apply_transaction_signature/2
+        |  	]).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  -include("potato_records.hrl").
+        |  
+        |  map_key_match_assert(Map, KeyList) -&gt;
+   194..|      K1 = lists:sort(maps:keys(Map)),
+   194..|      K2 = lists:sort(KeyList),
+   194..|      ?assertEqual(K1, K2, {"key mismatch", K1, K2}),
+   194..|      ok.
+        |  
+        |  transaction_map_structure_assert(T) when is_map(T) -&gt;
+     3..|      map_key_match_assert(T, ?transaction),
+        |      
+     3..|      CD = maps:get(consensus_data, T),
+     3..|      map_key_match_assert(CD, ?consensus_transaction_data),
+        |      
+     3..|      ok.
+        |  
+        |  check_block_map_structure(B) when is_map(B) -&gt;
+    94..|      map_key_match_assert(B, ?block),
+        |      
+    94..|      CD = maps:get(consensus_data, B),
+    94..|      map_key_match_assert(CD, ?consensus_block_data),
+        |      
+    94..|      TL = maps:get(transactions, B),
+    94..|      lists:map(fun transaction_map_structure_assert/1, TL),
+        |      
+    94..|      ok.
+        |      
+        |  %% get entry in block's consensus data
+    80..|  get_block_cd(Entry, Block) -&gt; maps:get(Entry, maps:get(consensus_data, Block)).
+        |  
+        |  %% @doc Computes hash of the block.
+        |  compute_block_hash(Block) when is_map(Block) -&gt;
+   116..|      #{consensus_data := CD} = Block,
+   116..|      CleanBlock = Block#{
+        |  	  this_id := undefined, 
+        |  	  consensus_data := CD#{signature := undefined}
+        |  	 },
+   116..|      my_crypto:hash( my_serializer:serialize_object(CleanBlock) ).
+        |  
+        |  %% @doc Computes hash of the transaction.
+        |  compute_transaction_hash(Transaction) when is_map(Transaction) -&gt;
+     2..|      CD = maps:get(consensus_data, Transaction),
+     2..|      CleanTransaction = Transaction#{
+        |  	  consensus_data := CD#{signature := undefined}
+        |  	 },
+     2..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
+        |  
+        |  %% @doc Inserts signature into the block.
+        |  %% 
+        |  %% Checks that block's this_id is correct and that signature is correct.
+        |  
+        |  apply_block_signature(Signature, Block) 
+        |    when is_map(Block) -&gt;
+    29..|      Hash = maps:get(this_id, Block),
+    29..|      PubKey = get_block_cd(verifier_pub_key, Block),
+        |  
+    29..|      ?assertEqual(Hash, compute_block_hash(Block)),
+        |      
+    29..|      ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),
+        |  
+    29..|      CD = maps:get(consensus_data, Block),
+        |      
+    29..|      Block#{consensus_data := CD#{signature := Signature}}.
+        |  
+        |  
+        |  %% @doc Inserts signature into the transaction.
+        |  %% 
+        |  %% Checks that the signature is correct.
+        |  
+        |  apply_transaction_signature(Signature, T) 
+        |    when is_map(T) -&gt;
+<font color=red>     0..|      Hash = compute_transaction_hash(T),</font>
+<font color=red>     0..|      PubKey = maps:get(player_id, T),</font>
+        |  
+<font color=red>     0..|      ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),</font>
+        |  
+<font color=red>     0..|      CD = maps:get(consensus_data, T),</font>
+        |      
+<font color=red>     0..|      T#{consensus_data := CD#{signature := Signature}}.</font>
+        |  
+        |  check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) -&gt;
+     2..|      transaction_map_structure_assert(Transaction),
+        |  
+        |      #{
+        |        consensus_data := CD,
+        |        player_id := PlrKey
+     2..|       } = Transaction,
+        |  
+        |      #{
+        |        signature := PlrSgn,
+        |        chain_id := TrChainId
+     2..|       } = CD,
+        |  
+     2..|      Hash = compute_transaction_hash(Transaction),
+        |  
+        |      %% verify signature's correctness
+     2..|      ?assert(my_crypto:verify(Hash, PlrSgn, PlrKey), "transaction signature failed verification"),
+        |  
+        |      %% compare ChainId
+     2..|      ?assertEqual(TrChainId, ChainId, "bad transaction ChainId"),
+        |  
+     2..|      ok.
+        |      
+        |  %% @doc Adds block to blocktree.
+        |  %% 
+        |  %% The block should new and right after already existing block.
+        |  %% Block's structure is checked and error is generated if it is incorrect.
+        |  
+        |  add_block_in_order(Block, CurrentTime, ProtocolData)
+        |    when 
+        |        is_record(ProtocolData, pop_chain), 
+        |        is_map(Block)
+        |        -&gt;
+        |  
+        |      %% checks maps for block and transactions inside
+    61..|      check_block_map_structure(Block),
+        |  
+        |      #pop_chain{
+        |         pop_config_data = #pop_config_data{
+        |  			    verifiers_arr = VerifiersArr, 
+        |  			    time_between_blocks = TimeBetween, 
+        |  			    time_desync_margin = TimeDesyncMargin,
+        |  			    chain_id = MainChainId
+        |  			   },
+        |         tree_data = TD0
+    61..|        } = ProtocolData,
+        |  
+        |      
+        |  
+        |      #{
+        |         previous_id := PrevId, 
+        |         this_id := ThisId, 
+        |         transactions := BlockTransactionsList,
+        |         consensus_data := #{
+        |  			   signature := VerSgn,
+        |  			   verifier_pub_key := VerKey,
+        |  			   verifier_index := VerIndex,
+        |  			   timestamp := Tmp
+        |  			  }
+    61..|        } = Block,
+        |      
+        |      
+        |      %% check that signer is one of the verifiers
+        |      #verifier_public_info{
+        |         index = VerIndexChk, 
+        |         public_key = PubKeyChk
+    61..|        } = array:get(VerIndex, VerifiersArr),
+        |  
+    61..|      ?assertEqual(VerIndex, VerIndexChk, "indices don't match"),
+    61..|      ?assertEqual(VerKey, PubKeyChk, "keys don't match"),
+        |  
+        |  
+        |      %% check that the time is correct for this verifier
+        |      %% (also check that it is not too far into the future)
+        |      %% should be larger, and have the correct remainder
+        |      
+    61..|      PreviousBlock = blocktree:get_block_by_id(PrevId, TD0),
+    59..|      PreviousBlockTimestamp = maps:get(timestamp, maps:get(consensus_data, PreviousBlock)),
+        |  
+    59..|      ?assert(PreviousBlockTimestamp &lt; Tmp, "time should be larger than previous"),
+    59..|      ?assert(Tmp - TimeDesyncMargin &lt; CurrentTime, "block cannot be in the future"),
+        |      
+    59..|      VerNum = array:size(VerifiersArr),
+    59..|      ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
+        |      
+        |      %% check ThisId hash correctness
+    58..|      Hash = ThisId,
+    58..|      ?assertEqual(Hash, compute_block_hash(Block), "incorrect hash"),
+        |  
+        |      %% check signature's correctness
+    58..|      ?assert(my_crypto:verify(Hash, VerSgn, VerKey), "signature failed verification"),
+        |  
+        |      %% (OPTIONAL) check sequence of different verifiers
+        |  
+        |      %% Verify transactions
+    58..|      lists:map(fun(T) -&gt; check_transaction_correctness(T, MainChainId) end, BlockTransactionsList),
+        |  
+        |      %% add this block to tree_data 
+        |      %% this can trigger errors if the block if poorly formed
+        |      %% also fails if block is orphan or already exists
+    58..|      TD1 = blocktree:add_block_in_order(Block, TD0),
+        |  
+        |      %% current last block keeps track of the last block in the chain
+        |      %% update it, if new block is the last one
+        |  
+        |  
+    55..|      CurrentHeadBlock = ProtocolData#pop_chain.head_block,
+    55..|      HeadBlock = resolve_fork(Block, CurrentHeadBlock, TD1),
+        |  
+        |      %% ?debugVal(CurrentHeadBlock),
+        |      %% ?debugVal(Block),
+        |      %% ?debugVal(HeadBlock),
+        |  
+    55..|      NewProtocolData = ProtocolData#pop_chain{tree_data = TD1, head_block = HeadBlock},
+        |  
+    55..|      NewProtocolData.
+        |  
+        |  %% @doc Initialize protocol data.
+        |  %% 
+        |  %% Creates a tree with genesis block with a fixed timestamp.
+        |  %% Genesis block's id is &lt;b&gt;genesis&lt;/b&gt;, it is the only block with non SHA hash id.
+        |  new(PopConfigData) 
+        |    when is_record(PopConfigData, pop_config_data) -&gt;
+        |  
+     4..|      CurrentTime = PopConfigData#pop_config_data.init_time,
+        |  
+     4..|      ?assert(CurrentTime &gt;= 0),
+        |  
+     4..|      TD0 = blocktree:new(),
+     4..|      B0 = blocktree:generate_new_block(undefined, TD0),
+     4..|      B1 = B0#{
+        |  	     this_id := genesis,
+        |  	     consensus_data := #{
+        |  				 timestamp =&gt; CurrentTime,
+        |  				 signature =&gt; undefined, 
+        |  				 verifier_pub_key =&gt; undefined, 
+        |  				 verifier_index =&gt; undefined
+        |  				}
+        |  	    },
+     4..|      check_block_map_structure(B1),
+     4..|      TD1 = blocktree:add_block_in_order(B1, TD0),
+        |  
+     4..|      PC = #pop_chain{
+        |  	    pop_config_data = PopConfigData,
+        |  	    tree_data = TD1,
+        |  	    head_block = B1,
+        |  	    genisys_block = B1
+        |  	   },
+     4..|      PC.
+        |  
+        |  %% @doc Resolves a fork between two branches.
+        |  %% 
+        |  %% Block with larger height wins.
+        |  %% If heights are the same, then branches are traced to the first branching point,
+        |  %% and then block at branching point with earlier timestamp wins.
+        |  %% If those timestamps are equal, block with smaller hash wins.
+        |  
+        |  resolve_fork(B1, B2, TreeData)
+        |    when 
+        |        is_map(B1),
+        |        is_map(B2),
+        |        is_record(TreeData, tree_data) -&gt;
+        |  
+    58..|      H1 = maps:get(height, B1),
+    58..|      H2 = maps:get(height, B2),
+        |  
+    58..|      if 
+        |  	H1 &gt; H2 -&gt; 
+    42..|  	    B1;
+        |  
+        |  	H2 &gt; H1 -&gt; 
+     8..|  	    B2;
+        |  
+        |  	H2 == H1 -&gt; 
+     8..|  	    Branch = resolve_fork_select_branch(B1, B2, TreeData),
+     8..|  	    if 
+        |  		Branch == first -&gt;
+     4..|  		    B1;
+        |  		Branch == second -&gt;
+     4..|  		    B2
+        |  	    end
+        |  	end.
+        |  
+        |  resolve_fork_select_branch(B1, B2, TreeData) -&gt;
+    17..|      Id1 = maps:get(previous_id, B1),
+    17..|      Id2 = maps:get(previous_id, B2),
+        |      
+    17..|      if 
+        |  	Id1 == Id2 -&gt;
+     8..|  	    resolve_fork_same_parent(B1, B2);
+        |  	Id1 /= Id2 -&gt;
+     9..|  	    BB1 = blocktree:get_block_by_id(Id1, TreeData),
+     9..|  	    BB2 = blocktree:get_block_by_id(Id2, TreeData),
+     9..|  	    resolve_fork_select_branch(BB1, BB2, TreeData)
+        |      end.
+        |  
+        |  resolve_fork_same_parent(B1, B2) -&gt;
+     8..|      T1 = get_block_cd(timestamp, B1),
+     8..|      T2 = get_block_cd(timestamp, B2),
+        |  
+     8..|      if 
+        |  	T1 &lt; T2 -&gt;
+     3..|  	    first;
+        |  	T2 &lt; T1 -&gt;
+     4..|  	    second;
+        |  	T1 == T2 -&gt;
+     1..|  	    Id1 = maps:get(this_id, B1),
+     1..|  	    Id2 = maps:get(this_id, B2),
+     1..|  	    if 
+        |  		Id1 &lt; Id2 -&gt;
+     1..|  		    first;
+        |  		Id2 &lt; Id1 -&gt;
+<font color=red>     0..|  		    second</font>
+        |  	    end
+        |  	    
+        |      end.
+        |  
+        |  %% @doc Get the next appropriate time for a verifier to make a block.
+        |  
+        |  get_verfier_next_block_time(VerifierIndex, PC) 
+        |    when is_record(PC, pop_chain) -&gt;
+        |  
+        |      #pop_chain{
+        |         pop_config_data = #pop_config_data{
+        |  	 verifiers_arr = VerifierArr,
+        |  	 time_between_blocks = TimeBetweenBlocks
+        |  	},
+        |         head_block = HeadBlock
+    35..|        } = PC,
+        |  
+    35..|      VerNum = array:size(VerifierArr),
+        |      
+    35..|      LastTime = get_block_cd(timestamp, HeadBlock),
+    35..|      LastZeroTime = LastTime - (LastTime rem (VerNum * TimeBetweenBlocks)),
+    35..|      NextTime = LastZeroTime + VerifierIndex * TimeBetweenBlocks,
+        |  
+    35..|      if 
+        |  	NextTime =&lt; LastTime -&gt;
+    14..|  	    NextTime + VerNum * TimeBetweenBlocks;
+        |  	NextTime &gt; LastTime -&gt;
+    21..|  	    NextTime
+        |      end.
+        |      
+        |  %% @doc Creates next block in the chain for a given verifier.
+        |  %% 
+        |  %% Created block is unsigned.
+        |  %% (Pending transactions are put into the block by blocktree.)
+        |  
+        |  generate_new_block(VerifierIndex, PC)
+        |    when is_record(PC, pop_chain) -&gt;
+        |  
+    29..|      Time = get_verfier_next_block_time(VerifierIndex, PC),
+        |  
+    29..|      TD = PC#pop_chain.tree_data,
+        |      
+    29..|      VerData = array:get(VerifierIndex, PC#pop_chain.pop_config_data#pop_config_data.verifiers_arr),
+    29..|      VerPub = VerData#verifier_public_info.public_key,
+        |  
+    29..|      LastId = maps:get(this_id, PC#pop_chain.head_block),
+        |  
+    29..|      B0 = blocktree:generate_new_block(LastId, TD),
+        |  
+    29..|      B1 = B0#{
+        |  	     consensus_data := #{
+        |  				 timestamp =&gt; Time,
+        |  				 signature =&gt; undefined, 
+        |  				 verifier_pub_key =&gt; VerPub, 
+        |  				 verifier_index =&gt; VerifierIndex
+        |  				}
+        |  	    },
+        |  
+    29..|      Hash = compute_block_hash(B1),
+        |  
+    29..|      B2 = B1#{this_id := Hash},
+        |  
+    29..|      check_block_map_structure(B2),
+        |  
+    29..|      B2.
+        |  
+        |  %% @doc Finds block by id.
+        |  %% 
+        |  %% Only looks among non-orphan blocks.
+        |  %% Returns {ok, Block} or error.
+        |  
+        |  find_block_by_id(Id, PC)
+        |    when is_record(PC, pop_chain) -&gt;
+    80..|      maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
+        |  
+        |  %% @doc Gets first block.
+     1..|  get_genisys_block(PC) -&gt; PC#pop_chain.genisys_block.
+        |  
+        |  %% @doc Gets last block.
+     5..|  get_head_block(PC) -&gt; PC#pop_chain.head_block.
+        |  
+        |  %% @doc Adds transaction to the structure.
+        |  %% 
+        |  %% Checks transaction correctness first.
+        |  %% Returns {Status, Container} where Status is 
+        |  %% ignored_duplicate, updated_old, added_new
+        |  add_transaction(T, PC)
+        |    when is_record(PC, pop_chain),
+        |         is_map(T) -&gt;
+        |      
+     1..|      check_transaction_correctness(T, PC#pop_chain.pop_config_data#pop_config_data.chain_id),
+        |  
+     1..|      TD = PC#pop_chain.tree_data,
+     1..|      {Status, TD1} = blocktree:add_new_transaction(T, TD),
+        |      
+     1..|      {Status, PC#pop_chain{tree_data = TD1} }.
+</pre>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/aggregate/web3.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/web3/web3.erl by COVER 2018-10-27 at 19:57:10
+
+****************************************************************************
+
+        |  -module(web3).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  
+        |  -behaviour(gen_server).
+        |  -export([init/1, handle_call/3, handle_cast/2]).
+        |  % TODO actually hook up to web3 XD
+        |  
+        |  %% how many coop chain blocks to wait before consider verified
+        |  % -define(K, 10).
+        |  
+        |  %%
+        |  -spec init(_) -&gt; {ok,-1}.
+        |  init(_) -&gt;
+        |    %?debugMsg("starting web3 server..."),
+     1..|    Pid = self(),
+     1..|    spawn_link(fun() -&gt; height_poll("", Pid) end),
+     1..|    {ok, -1}.
+        |  
+        |  %% return current block number
+        |  -spec handle_call(_, {pid(),_}, integer()) -&gt; {reply, integer(), integer()}.
+        |  handle_call(_, _From, BlockNum) -&gt;
+        |    %?debugMsg("handlecall"),
+     2..|    {reply, max(-1,BlockNum - 10), BlockNum}.
+        |  
+        |  
+        |  -spec handle_cast(stop|integer(), integer()) -&gt; {stop, ok, integer()} | {noreply, integer()}.
+        |  handle_cast(Cmd, BlockNum) when Cmd == stop -&gt;
+     1..|    {stop, ok, BlockNum};
+        |  handle_cast(NewBlockNum, _) -&gt;
+        |    %?debugMsg("handlecast"),
+     1..|    {noreply, NewBlockNum}.
+        |  
+        |  
+        |  -spec height_poll(string(), pid()) -&gt; no_return().
+        |  height_poll(Provider, _ReplyPid)-&gt;
+        |    %TODO actually poll
+     3..|    timer:sleep(100),
+        |    %?debugFmt("polling... ~p~n", [_ReplyPid]),
+     2..|    gen_server:cast(_ReplyPid, 123),
+     2..|    height_poll(Provider, _ReplyPid).
+</pre>
+</body>
+</html>

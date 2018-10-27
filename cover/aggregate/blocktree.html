@@ -1,0 +1,268 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/aggregate/blocktree.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/blocktree.erl by COVER 2018-10-27 at 19:57:10
+
+****************************************************************************
+
+        |  %% @doc Blocktree
+        |  %% 
+        |  %% Potential optimization: searches for previous nonce by player can 
+        |  %% be made faster by caching previous searches. Would speed up
+        |  %% add_block_in_order and generate_new_block
+        |  
+        |  -module(blocktree).
+        |  
+        |  -export([
+        |  	 new/0,
+        |  	 add_new_transaction/2,
+        |  	 add_block_in_order/2,
+        |  	 generate_new_block/2,
+        |  	 get_block_by_id/2
+        |  	 %% get_all_longest_branches/1,
+        |  	 %% get_children_block_list/2
+        |  	]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  -include("potato_records.hrl").
+        |  
+        |  -type tx() :: map().
+        |  %% -type txarray() :: array:array(tx()).
+        |  -type txlist() :: [tx()].
+        |  -type playertxmap() :: map().
+        |  -type addresult() :: ignore_duplicate | added | ignore_nonce_too_high.
+        |  -type treedata() :: #tree_data{}.
+        |  -type playerid() :: integer().
+        |  -type nonce() :: integer().
+        |  -type blockid() :: integer() | undefined.
+        |  -type blockmap() :: map().
+        |  -type block() :: map().
+        |  
+        |  %% @doc Initializes an empty container
+        |  -spec new() -&gt; treedata().
+        |  new() -&gt;
+    11..|      #tree_data{
+        |         pending_transactions = pending_transactions:new(), 
+        |         block_map = maps:new()
+        |        }.
+        |  
+        |  %% @doc Adds a new transaction to transaction list.
+        |  %%
+        |  %% Called when we get a new transaction from a player.
+        |  %% Can do it out of order.
+        |  %% Duplicate transactions are ignored, but we can rewrite a transaction 
+        |  %% with a given nonce by a different transaction with the same nonce.
+        |  %% Returns {Status, Container} where Status is 
+        |  %% ignored_duplicate, updated_old, added_new
+        |  
+        |  -spec add_new_transaction(tx(), treedata()) -&gt; {addresult(), treedata()}.
+        |  add_new_transaction(Transaction, TreeData)
+        |    when is_map(Transaction),
+        |         is_record(TreeData, tree_data) -&gt;
+        |  
+    25..|      {PendingTxNew, Status} = pending_transactions:add_transaction(Transaction, TreeData#tree_data.pending_transactions),
+        |  
+    25..|      {Status, TreeData#tree_data{pending_transactions = PendingTxNew}}.
+        |      
+        |  
+        |  -spec transaction_list_check_if_in_order(playerid(), txlist()) -&gt; ok.
+        |  transaction_list_check_if_in_order(_, List) -&gt;
+    20..|      NonceList = lists:map(fun (T) -&gt; maps:get(nonce, T) end, List),
+    20..|      [FirstNonce | _] = NonceList,
+    20..|      Sz = length(List),
+    20..|      ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
+        |  
+    20..|      ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
+        |  
+        |  -spec get_first_nonce_in_transaction_list(playerid(), txlist()) -&gt; nonce().
+        |  get_first_nonce_in_transaction_list(_, TransactionList) -&gt;
+    20..|      [FirstTransaction | _ ] = TransactionList,
+    20..|      maps:get(nonce, FirstTransaction).
+        |  
+        |  -spec get_last_nonce_in_transaction_list(txlist()) -&gt; nonce().
+        |  get_last_nonce_in_transaction_list(TransactionList) -&gt;
+    14..|      [FirstTransaction | _ ] = TransactionList,
+    14..|      FirstNonce = maps:get(nonce, FirstTransaction),
+    14..|      Sz = length(TransactionList),
+    14..|      FirstNonce + Sz - 1.
+        |  
+        |  -spec search_previous_transaction_nonce_for_player(playerid(), blockmap(), blockid()) -&gt; nonce().
+        |  search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == undefined -&gt;
+    11..|      -1;
+        |  search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) -&gt;
+    23..|      {ok, Block} = maps:find(BlockId, BlockMap),
+    23..|      #{previous_id := PrevBlockId, transactions := BlockTransactionsList} = Block,
+        |  
+    23..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+        |  
+    23..|      case maps:find(PlayerId, BlockTransactionsMap) of
+        |  	{ok, TransactionList} -&gt;
+    14..|  	    get_last_nonce_in_transaction_list(TransactionList);
+        |  	error -&gt;
+     9..|  	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
+        |      end.
+        |  
+        |  -spec transaction_map_from_list(txlist()) -&gt; playertxmap().
+        |  transaction_map_from_list(ListR) -&gt;
+    94..|      List = lists:reverse(ListR),
+    94..|      lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
+        |  
+        |  transaction_map_from_list(T, Map) -&gt;
+   126..|      Id = maps:get(player_id, T),
+        |  
+   126..|      case maps:find(Id, Map) of
+        |  	{ok, OldList} -&gt;
+    56..|  	    NewList = [T | OldList];
+        |  	error -&gt;
+    70..|  	    NewList = [T]
+        |      end,
+   126..|      maps:put(Id, NewList, Map).
+        |  
+        |  %% @doc Adds a new block to the blocktree.
+        |  %%
+        |  %% If successful, it returns updated TreeData.
+        |  %%
+        |  %% Fails if:
+        |  %%
+        |  %% &lt;ul&gt;
+        |  %% &lt;li&gt; can't find previous block&lt;/li&gt;
+        |  %% &lt;li&gt; this_id is not unique &lt;/li&gt;
+        |  %% &lt;li&gt; height is incorrect&lt;/li&gt;
+        |  %% &lt;li&gt; transactions list is incorrect:
+        |  %%   &lt;ul&gt;
+        |  %%     &lt;li&gt; Nonces in each list should be in order&lt;/li&gt;
+        |  %%     &lt;li&gt; First nonce in a list should come after the last nonce in the chain for that player&lt;/li&gt;
+        |  %%   &lt;/ul&gt;
+        |  %% &lt;/li&gt;
+        |  %% &lt;/ul&gt;
+        |  %%
+        |  %% Note: genesis block will have previous_id=undefined and height=0
+        |  
+        |  
+        |  
+        |  -spec add_block_in_order(block(), treedata()) -&gt; treedata().
+        |  add_block_in_order(Block, TreeData)
+        |    when is_map(Block),
+        |         is_record(TreeData, tree_data) -&gt;
+        |  
+    72..|      #tree_data{block_map = BlockMap} = TreeData,
+    72..|      #{previous_id := PrevId, this_id := ThisId, height := Height, transactions := BlockTransactionsList} = Block,
+        |  
+    72..|      ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),
+        |  
+    71..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+        |  
+    71..|      maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
+        |  
+        |      %% check_that_player_ids_are_correct(BlockTransactionsMap),
+        |  
+    71..|      FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
+        |  
+    71..|      MapEmpty = maps:size(BlockMap) == 0,
+    71..|      if
+        |  	MapEmpty -&gt;
+    10..|  	    ?assertEqual(Height, 0, "genesis, bad height"),
+        |  
+    10..|  	    ?assertEqual(PrevId, undefined, "genesis, bad previous_id"),
+        |  
+    10..|  	    ZeroNonceMap = maps:map(fun(_, _) -&gt; 0 end, BlockTransactionsMap),
+        |  
+    10..|  	    ?assertEqual(FirstNonceMap,  ZeroNonceMap, "genesis, transactions not starting with zero");
+        |  
+        |  	not MapEmpty -&gt;
+    61..|  	    Result = maps:find(PrevId, BlockMap),
+        |  
+    61..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
+        |  
+    61..|  	    {ok, PrevBlock} = Result,
+        |  
+    61..|  	    ?assertEqual(Height, maps:get(height, PrevBlock) + 1, "bad height"),
+        |  
+    59..|  	    MapFn = fun(PlayerId, _) -&gt; 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
+    59..|  	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
+        |  
+    59..|  	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
+        |      end,
+        |  
+    69..|      NewBlockMap = maps:put(ThisId, Block, BlockMap),
+        |  
+    69..|      TreeData#tree_data{block_map = NewBlockMap}.
+        |  
+        |  %% @doc Generates new block after block with PreviousBlockId.
+        |  %% 
+        |  %% Puts the appropriate pending transactions inside.
+        |  
+        |  -spec generate_new_block(blockid(), treedata()) -&gt; map().
+        |  generate_new_block(PreviousBlockId, TreeData)
+        |    when is_record(TreeData, tree_data) -&gt;
+        |      #tree_data{
+        |         block_map = BlockMap,
+        |         pending_transactions = PendingTx
+    38..|        } = TreeData,
+        |  
+    38..|      if
+        |  	PreviousBlockId == undefined -&gt;
+     6..|  	    Height = 0;
+        |  
+        |  	PreviousBlockId /= undefined -&gt;
+    32..|  	    Result = maps:find(PreviousBlockId, BlockMap),
+        |  
+    32..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
+        |  
+    32..|  	    {ok, PrevBlock} = Result,
+        |  
+    32..|  	    Height = 1 + maps:get(height, PrevBlock)
+        |      end,
+        |      
+    38..|      PendingPlayers = pending_transactions:get_pending_players(PendingTx),
+        |  
+    38..|      MapFn = fun(PlayerId) -&gt; 
+    13..|  		    NextNonce = 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PreviousBlockId),
+    13..|  		    {PlayerId, NextNonce}
+        |  	    end,
+        |  
+    38..|      FirstNonceMap = maps:from_list(lists:map(MapFn, PendingPlayers)),
+        |  
+    38..|      BlockTransactions = pending_transactions:get_pending_transactions(FirstNonceMap, PendingTx),
+        |  
+    38..|      #{
+        |        previous_id =&gt; PreviousBlockId,
+        |        this_id =&gt; undefined,
+        |        height =&gt; Height,
+        |        transactions =&gt; BlockTransactions,
+        |        consensus_data =&gt; undefined
+        |       }.
+        |  
+        |  -spec get_block_by_id(blockid(), treedata()) -&gt; block().
+        |  get_block_by_id(Id, TreeData)
+        |    when is_record(TreeData, tree_data) -&gt;
+        |  
+    83..|      #tree_data{block_map = BlockMap} = TreeData,
+    83..|      Result = maps:find(Id, BlockMap),
+        |  
+    83..|      ?assertMatch({ok, _}, Result, "cannot find block by id"),
+    79..|      {ok, Block} = Result,
+    79..|      Block.
+        |  
+        |  %% -spec get_all_longest_branches(treedata()) -&gt; [block()].
+        |  %% get_all_longest_branches(TreeData)
+        |  %%   when is_record(TreeData, tree_data) -&gt;
+        |  %%     #tree_data{block_map = BlockMap} = TreeData,
+        |  %%     MaxHtFn = fun(_, V, Max) -&gt; max(maps:get(height, V), Max) end,
+        |  %%     MaxHt = maps:fold(MaxHtFn, 0, BlockMap),
+        |  %%     MaxHtList = maps:values(maps:filter(fun(_, V) -&gt; maps:get(height, V) == MaxHt end, BlockMap)),
+        |  %%     MaxHtList.
+        |  
+        |  %% -spec get_children_block_list(blockid(), treedata()) -&gt; [block()].
+        |  %% get_children_block_list(PrevId, TreeData)
+        |  %%   when is_record(TreeData, tree_data) -&gt;
+        |  %%     #tree_data{block_map = BlockMap} = TreeData,
+        |  %%     maps:values(maps:filter(fun(_, B) -&gt; maps:get(previous_id, B) == PrevId end, BlockMap)).
+</pre>
+</body>
+</html>
