@@ -1,0 +1,55 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/potato_haskell.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/potato_haskell.erl by COVER 2018-10-27 at 23:14:36
+
+****************************************************************************
+
+        |  -module(potato_haskell).
+        |  
+        |  -export([mapAccumL/3, for/2, unfoldr/2]).
+        |  
+        |  
+        |  -spec mapAccumL(Fun, Acc, List) -&gt; {Acc, List} when
+        |    Fun :: fun((Acc, Elem :: T) -&gt; {Acc, Out}),
+        |    Acc :: term(),
+        |    List :: [T],
+        |    Out :: term(),
+        |    T :: term().
+        |  mapAccumL(Fun, Acc, List) -&gt;
+     5..|    lists:foldl(fun(X, {FAcc, Outlist}) -&gt;
+    20..|      {NAcc, NOut} = Fun(FAcc, X),
+        |      %% inefficient snocing, w/e
+        |      %% TODO implement using foldr instead
+    20..|      {NAcc, Outlist ++ [NOut]}
+        |    end, {Acc,[]}, List).
+        |  
+        |  -spec unfoldr(Fun, Acc) -&gt; List when
+        |    Fun :: fun((Acc) -&gt; Out),
+        |    Out :: {Elem :: T, Acc} | term(),
+        |    List :: [T].
+     1..|  unfoldr(Fun, Acc) -&gt; lists:reverse(unfoldr_internal(Fun, Acc, [])).
+        |  
+        |  unfoldr_internal(Fun, Acc, Out) -&gt;
+    11..|    case Fun(Acc) of
+    10..|      {X, NAcc} -&gt; unfoldr_internal(Fun, NAcc, [X]++Out);
+     1..|      _ -&gt; Out
+        |    end.
+        |  
+        |  %% not exactly forM but whatever
+        |  %% probably actually is some haskell function that does this but I can't remeber what it is anymore
+        |  -spec for(Fun, N) -&gt; no_return() when
+        |    Fun :: fun(() -&gt; no_return()),
+        |    N :: integer().
+        |  for(_, 0) -&gt;
+     2..|    ok;
+        |  for(Fun, N) -&gt;
+    30..|    Fun(),
+    30..|    for(Fun, N-1).
+</pre>
+</body>
+</html>

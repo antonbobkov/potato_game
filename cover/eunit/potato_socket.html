@@ -1,0 +1,70 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/potato_socket.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/p2p/potato_socket.erl by COVER 2018-10-27 at 23:14:36
+
+****************************************************************************
+
+        |  -module(potato_socket).
+        |  
+        |  -export([start/0, start_server/0, start_client/0, handle_server_side/1, handle_client_side/1]).
+        |  
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  start() -&gt;
+<font color=red>     0..|      io:fwrite("hello, world\n"),</font>
+<font color=red>     0..|      spawn(?MODULE, start_server, []),</font>
+<font color=red>     0..|      timer:sleep(100), % need to sleep otherwise there is a race cond between server/client</font>
+<font color=red>     0..|      spawn(?MODULE, start_client, []).</font>
+        |  
+        |  
+        |  start_client() -&gt;
+<font color=red>     0..|      io:fwrite("starting client\n"),</font>
+<font color=red>     0..|      {ok, Sock} = gen_tcp:connect("localhost", 5678, [binary, {active, true}]),</font>
+<font color=red>     0..|      gen_tcp:send(Sock, "Some Data"),</font>
+<font color=red>     0..|      handle_client_side(Sock).</font>
+        |  
+        |  handle_client_side(Socket) -&gt;
+        |      %io:fwrite("handling socket client\n"),
+<font color=red>     0..|      receive</font>
+        |          {tcp, Socket, Msg} -&gt;
+        |              %%gen_tcp:send(Socket, Msg),
+<font color=red>     0..|              io:fwrite("client got message ~p\n", [Msg]),</font>
+<font color=red>     0..|              gen_tcp:close(Socket);</font>
+        |          X -&gt;
+<font color=red>     0..|              io:fwrite("unkown match ~p\n", [X])</font>
+        |      end.
+        |  
+        |  start_server() -&gt;
+<font color=red>     0..|      io:fwrite("starting server \n"),</font>
+<font color=red>     0..|      {ok, LSock} = gen_tcp:listen(5678, [binary, {active, true}]),</font>
+<font color=red>     0..|      tcp_listener(LSock).</font>
+        |  
+        |  tcp_listener(LSock) -&gt;
+        |      %io:fwrite("listening\n"),
+        |      % for some reason this will return {error, closed} when handle_server_side returns...
+<font color=red>     0..|      {ok, Sock} = gen_tcp:accept(LSock),</font>
+<font color=red>     0..|      io:fwrite("accept\n"),</font>
+<font color=red>     0..|      spawn(fun() -&gt; tcp_listener(LSock) end),</font>
+<font color=red>     0..|      handle_server_side(Sock).</font>
+        |  
+        |  handle_server_side(Socket) -&gt;
+        |      %io:fwrite("handling socket server \n"),
+<font color=red>     0..|      inet:setopts(Socket, [{active, true}]),</font>
+<font color=red>     0..|      receive</font>
+        |          {tcp, Socket, Msg} -&gt;
+<font color=red>     0..|              io:fwrite("server got msg ~p\n", [Msg]),</font>
+<font color=red>     0..|              io:fwrite("echoing ~p\n", [Msg]),</font>
+<font color=red>     0..|              gen_tcp:send(Socket, Msg),</font>
+<font color=red>     0..|              handle_server_side(Socket);</font>
+        |          X -&gt;
+<font color=red>     0..|              io:fwrite("unkown match ~p\n", [X]),</font>
+<font color=red>     0..|              gen_tcp:close(Socket)</font>
+        |      end.
+</pre>
+</body>
+</html>

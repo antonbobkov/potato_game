@@ -1,0 +1,331 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/pop_manager.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_manager.erl by COVER 2018-10-27 at 23:14:36
+
+****************************************************************************
+
+        |  %% @doc Manages network messages and unbound blocks for pop_chain.
+        |  %% 
+        |  %% Can run on its own in a loop, but is meant to be extended
+        |  %% to have more structure, to serve as verifier or player.
+        |  %% Those will be implemented in pop_verifier.erl and pop_player.erl
+        |  %% 
+        |  %% This has the code that responds to block requests.
+        |  %% Current idea is that only verifiers should do that,
+        |  %% though it is not inconcievable that players can also
+        |  %% provide that information to each other.
+        |  
+        |  -module(pop_manager).
+        |  
+        |  -export([
+        |  	 new/2,
+        |  	 on_net_message/5
+        |  	]).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  -include("potato_records.hrl").
+        |  
+        |  %% @doc Makes new container, using pop protocol config data,
+        |  %% and external function hooks.
+        |  %% 
+        |  %% Current hooks are: 
+        |  %% - send network message
+        |  %% - on_new_block: react to new block added to chain
+        |  
+        |  new(PopConfigData, PopManagerConfig) -&gt;
+     2..|      #pop_manager{
+        |         pop_chain = pop_chain:new(PopConfigData),
+        |         config = PopManagerConfig,
+        |         unbound_blocks = maps:new()
+        |        }.
+        |      
+        |  
+        |  %% Is the block known to us?
+        |  %% 
+        |  %% It is either in chain, pending as an unbound block,
+        |  %% or unknown altogether.
+        |  %% Returns in_chain, unbound, or unknown
+        |  get_block_status(Hash, PopManager) -&gt;
+        |      #pop_manager{
+        |         pop_chain = PC,
+        |         unbound_blocks = UB
+    27..|        } = PopManager,
+        |      
+    27..|      R1 = pop_chain:find_block_by_id(Hash, PC),
+    27..|      case R1 of
+        |  	{ok, _} -&gt;
+     8..|  	    in_chain;
+        |  	error -&gt;
+    19..|  	    R2 = maps:find(Hash, UB),
+    19..|  	    case R2 of
+        |  		{ok, _} -&gt;
+     2..|  		    unbound;
+        |  		error -&gt;
+    17..|  		    unknown
+        |  	    end
+        |      end.
+        |  
+        |  %% get previous block
+        |  get_prev(Block, PC) -&gt;
+    26..|      {ok, Prev} = pop_chain:find_block_by_id(maps:get(previous_id, Block), PC),
+    26..|      Prev.
+        |  
+        |  %% get n'th previous block, stop at genisys block
+        |  get_nth_prev_block(N, Block, PC) -&gt;
+     5..|      Ht = maps:get(height, Block),
+     5..|      if (Ht == 0) or (N == 0) -&gt;
+     2..|  	    Block;
+        |         (Ht &gt; 0) and (N &gt; 0) -&gt;
+     3..|  	    get_nth_prev_block(N-1, get_prev(Block, PC), PC)
+        |      end.
+        |  
+        |  setup_range_request(UnknownBlock, PopManager) -&gt;
+     2..|      PC = PopManager#pop_manager.pop_chain,
+     2..|      N = PopManager#pop_manager.config#pop_manager_config.request_range_backup,
+        |  
+     2..|      KnownBlock1 = pop_chain:get_head_block(PC),
+     2..|      KnownBlock2 = get_nth_prev_block(N, KnownBlock1, PC),
+        |      
+     2..|      {maps:get(this_id, KnownBlock1), maps:get(this_id, KnownBlock2), maps:get(this_id, UnknownBlock)}.
+        |  
+        |  %% given unknown block request, and longest known block from another party
+        |  %% make a best guess about which blocks are unknown to the other party
+        |  %% and return a array of hashes of those blocks
+        |  
+        |  compute_block_hash_range(UnknownBlockHash, KnownBlockHash, PopManager) -&gt;
+     4..|      PC = PopManager#pop_manager.pop_chain,
+     4..|      {ok, UnknownBlock} = pop_chain:find_block_by_id(UnknownBlockHash, PC),
+     4..|      {ok, KnownBlock} = pop_chain:find_block_by_id(KnownBlockHash, PC),
+        |  
+     4..|      compute_block_hash_range(UnknownBlock, KnownBlock, PC, []).
+        |  
+        |  compute_block_hash_range(UnknownBlock, KnownBlock, PC, AccList) -&gt;
+    19..|      UnknownId = maps:get(this_id, UnknownBlock),
+    19..|      KnownId = maps:get(this_id, KnownBlock),
+        |  
+    19..|      UnknownHeight = maps:get(height, UnknownBlock),
+    19..|      KnownHeight = maps:get(height, KnownBlock),
+        |  
+    19..|      if UnknownId == KnownId -&gt;
+     4..|  	    AccList;  % done, found common parent
+        |  
+        |         UnknownId /= KnownId -&gt;
+        |  	    %% decrement higher block, or both if equal height
+        |  	    %% each time Unknown is decremented, add its hash to the list
+        |  
+    15..|  	    if UnknownHeight &gt; KnownHeight -&gt; 	
+     6..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
+     6..|  	            KnownBlockNew = KnownBlock,
+     6..|  	            AccListNew = [UnknownId | AccList];
+        |  
+        |  	       UnknownHeight &lt; KnownHeight -&gt;
+     1..|  		    UnknownBlockNew = UnknownBlock, 
+     1..|  	            KnownBlockNew = get_prev(KnownBlock, PC),
+     1..|  	            AccListNew = AccList;
+        |  
+        |  	       UnknownHeight == KnownHeight -&gt;
+     8..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
+     8..|  	            KnownBlockNew = get_prev(KnownBlock, PC),
+     8..|  	            AccListNew = [UnknownId | AccList]
+        |  	    end,
+        |  
+    15..|  	    compute_block_hash_range(UnknownBlockNew, KnownBlockNew, PC, AccListNew)
+        |      end.
+        |      
+        |  %% Adds a new block into pop_chain.
+        |  %% Then it checks unbound blocks, and adds all that become bound.
+        |  %% Function hook on_new_block is triggered on each addition.
+        |  
+        |  add_block_in_order(Block, CurrentTime, PopManager0) -&gt;
+    11..|      PC0 = PopManager0#pop_manager.pop_chain,
+    11..|      UnboundMap0 = PopManager0#pop_manager.unbound_blocks,
+        |  
+    11..|      OnNewBlockFn = PopManager0#pop_manager.config#pop_manager_config.on_new_block,
+        |  
+    11..|      PC1 = pop_chain:add_block_in_order(Block, CurrentTime, PC0),
+        |  
+    11..|      OnNewBlockFn(Block),
+        |  
+        |      %% process unbound blocks, recursively add new ones as needed
+        |  
+    11..|      IsUnboundPred = 
+        |  	fun({_Id, B}) -&gt;
+     4..|  		R = pop_chain:find_block_by_id(maps:get(previous_id, B), PC1),
+     4..|  		case R of
+        |  		    {ok, _} -&gt;
+     3..|  			false;
+        |  		    error -&gt;
+     1..|  			true
+        |  		end
+        |  	end,
+        |  
+    11..|      {UnboundList, BoundList} = lists:partition(IsUnboundPred, maps:to_list(UnboundMap0)),
+        |      
+    11..|      UnboundMap1 = maps:from_list(UnboundList),
+        |  
+    11..|      PopManager1 = PopManager0#pop_manager{
+        |  		    pop_chain = PC1,
+        |  		    unbound_blocks = UnboundMap1
+        |  		   },
+        |  
+    11..|      FoldFn = fun({_Id, NewBlock}, PM) -&gt; add_block_in_order(NewBlock, CurrentTime, PM) end,
+        |  
+    11..|      PopManager2 = lists:foldl(FoldFn, PopManager1, BoundList),
+        |      
+    11..|      PopManager2.
+        |  			  
+        |      
+        |  	    
+        |  %% Processes a new block, either ignoring a duplicate, 
+        |  %% storing it as unbound for later inserting, or inserting it.
+        |  
+        |  add_block_any_order(Block, CurrentTime, PopManager) -&gt;
+        |  
+    15..|      PC = PopManager#pop_manager.pop_chain,
+    15..|      UnboundMap = PopManager#pop_manager.unbound_blocks,
+        |  
+    15..|      ThisId = maps:get(this_id, Block),
+    15..|      PrevId = maps:get(previous_id, Block),
+        |  
+    15..|      R1 = pop_chain:find_block_by_id(ThisId, PC),
+    15..|      case R1 of
+        |  	{ok, _} -&gt;
+     1..|  	    Status = ignored_duplicate;
+        |  	error -&gt;
+    14..|  	    R2 = pop_chain:find_block_by_id(PrevId, PC),
+    14..|  	    case R2 of
+        |  		{ok, _} -&gt;
+     8..|  		    Status = added_new;
+        |  		error -&gt;
+     6..|  		    Status = unbound
+        |  	    end	    
+        |      end,
+        |  
+    15..|      if Status == added_new -&gt;
+     8..|  	    {Status, add_block_in_order(Block, CurrentTime, PopManager)};
+        |  
+        |         Status == unbound -&gt;
+     6..|  	    UnboundMapNew = maps:put(ThisId, Block, UnboundMap),
+     6..|  	    {Status, PopManager#pop_manager{unbound_blocks = UnboundMapNew}};
+        |  
+        |         Status == ignored_duplicate -&gt;
+     1..|  	    {Status, PopManager}
+        |      end.
+        |  
+        |  
+        |  %% @doc Receive hashes, request unknown blocks.
+        |  
+        |  on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) -&gt;
+     1..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+        |  
+     1..|      FilterFn = fun (Hash) -&gt; get_block_status(Hash, PopManager) == unknown end,
+        |  
+     1..|      UnknownHashList = lists:filter(FilterFn, HashList),
+        |  
+     1..|      NetSendFn(SenderAddress, request_full_blocks, UnknownHashList),
+        |  
+     1..|      PopManager;
+        |  
+        |  %% @doc Receive blocks, add them to the structure.
+        |  
+        |  on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, PopManager) -&gt;
+     5..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+        |  
+     5..|      FoldFn = 
+        |  	fun(Block, PM) -&gt;
+    15..|  		Hash = maps:get(this_id, Block),
+    15..|  		BlockStatus = get_block_status(Hash, PM),
+        |  
+    15..|  		if (Age == new) and (BlockStatus == unknown) -&gt;
+     2..|  			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(Block, PM));
+    13..|  		   true -&gt; ok
+        |  		end,
+        |  		
+    15..|  		{_Status, NewPM} = add_block_any_order(Block, CurrentTime, PM),
+    15..|  		NewPM
+        |  	end,
+        |  
+     5..|      NewPopManager = lists:foldl(FoldFn, PopManager, BlockList),
+     5..|      NewPopManager;
+        |  
+        |  %% @doc Respond to hash range request by computing and sending the range.
+        |  
+        |  on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) -&gt;
+     4..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+        |  
+     4..|      St1 = get_block_status(KnownHash1, PopManager),
+     4..|      St2 = get_block_status(KnownHash2, PopManager),
+        |      
+     4..|      if 
+        |  	St1 == in_chain -&gt;
+     2..|  	    KnownHash = KnownHash1;
+        |  	St2 == in_chain -&gt;
+     1..|  	    KnownHash = KnownHash2;
+        |  	true -&gt;
+     1..|  	    KnownHash = maps:get(this_id, pop_chain:get_genisys_block(PopManager#pop_manager.pop_chain))
+        |      end,
+        |  
+     4..|      RequestHashList = compute_block_hash_range(UnknownHash, KnownHash, PopManager),
+        |  
+     4..|      NetSendFn(SenderAddress, send_block_hashes, RequestHashList),
+        |  
+     4..|      PopManager;
+        |  
+        |  %% @doc Respond to block request by sending all the known requested blocks.
+        |  
+        |  on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) -&gt;
+     2..|      PC = PopManager#pop_manager.pop_chain,
+     2..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+        |  
+     2..|      MapFn = fun (Hash) -&gt;
+     5..|  		    R1 = pop_chain:find_block_by_id(Hash, PC),
+     5..|  		    case R1 of
+        |  			{ok, Block} -&gt;
+     4..|  			    NetSendFn(SenderAddress, send_full_blocks, {old, [Block]});
+        |  			error -&gt;
+     1..|  			    debug_only:error("unexpected request_full_blocks, unknown hash")
+        |  		    end,
+     4..|  		    Hash
+        |  	    end,
+        |  
+     2..|      lists:map(MapFn, HashList),
+        |  
+     1..|      PopManager;
+        |  
+        |  %% @doc Process the received transactions.
+        |  
+        |  on_net_message(_, _, send_transactions, TransactionList, PopManager) -&gt;
+     1..|      PC = PopManager#pop_manager.pop_chain,
+        |  
+     1..|      FoldFn = fun (T, PC0) -&gt;
+     1..|  		     {_, PC1} = pop_chain:add_transaction(T, PC0),
+     1..|  		     PC1
+        |  	     end,
+        |      
+     1..|      NewPC = lists:foldl(FoldFn, PC, TransactionList),
+        |  
+     1..|      PopManager#pop_manager{pop_chain = NewPC}.
+        |  
+        |  %% doc Loop that handles messages.
+        |  
+        |  %% loop(PopManager) -&gt;
+        |  %%     receive 
+        |  %% 	{net, SenderAddress, CurrentTime, MsgId, Data} -&gt;
+        |  %% 	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
+        |  %% 	    loop(NewPopManager);
+        |  %% 	exit -&gt;
+        |  %% 	    done;
+        |  %% 	Unexpected -&gt;
+        |  %% 	    ?debugVal(Unexpected),
+        |  %% 	    erlang:error("unexpected message")
+        |  %%     end.
+</pre>
+</body>
+</html>

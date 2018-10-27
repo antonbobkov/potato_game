@@ -20,10 +20,7 @@ make_transaction(PrivateKey, PublicKey, Nonce, ChainId) ->
 	  },
     Hash = my_crypto:hash(my_serializer:serialize_object(T0)),
     Signature = my_crypto:sign(Hash, PrivateKey),
-    CD = maps:get(consensus_data, T0),
-    T1 = T0#{
-	     consensus_data := CD#{signature := Signature}
-	    },
+    T1 = pop_chain:apply_transaction_signature(Signature, T0),
 
     T1.
 
@@ -143,6 +140,8 @@ basic_test() ->
     %% same verifier adds two different blocks
     T = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
     B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
+    
+    lists:foldl(FoldFn, PD0, [B1T, B1]),
     PDT = lists:foldl(FoldFn, PD0, [B1, B1T]),
 
     MinHash = min(maps:get(this_id, B1), maps:get(this_id, B1T)),

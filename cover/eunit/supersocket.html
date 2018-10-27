@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/supersocket.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/p2p/supersocket.erl by COVER 2018-10-27 at 23:14:36
+
+****************************************************************************
+
+        |  %% this module contains a supervised socket server thingy
+        |  -module(supersocket).
+        |  -behaviour(supervisor).
+        |  
+        |  -export([start_socket_server/0]).
+        |  -export([start_socket/0]).
+        |  -export([init/1]).
+        |  
+        |  -include_lib("eunit/include/eunit.hrl").
+        |  -include_lib("stdlib/include/assert.hrl").
+        |  
+        |  start_socket_server() -&gt;
+     1..|    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+        |  
+        |  
+        |  init([]) -&gt;
+     1..|    Port = 8384,
+        |    %% what is {packet, line} idk?
+     1..|    {ok, ListenSocket} = gen_tcp:listen(Port, [{active,once}, {packet,line}]),
+     1..|    io:fwrite("supersocket listening on port ~p\n", [inet:port(ListenSocket)]),
+     1..|    spawn_link(fun empty_listeners/0),
+     1..|    {ok, {{simple_one_for_one, 60, 3600},[
+        |      {socket,
+        |      {supersocket_tcplistener, start_link, [ListenSocket]}, % pass the socket!
+        |      temporary, 1000, worker, [sockserv_serv]}
+        |    ]}}.
+        |  
+        |  start_socket() -&gt;
+    28..|    supervisor:start_child(?MODULE, []).
+        |  
+        |  %% Start with 20 listeners so that many multiple connections can join at once
+        |  %% without waiting on previous one to finish connecting.
+        |  empty_listeners() -&gt;
+     1..|    [start_socket() || _ &lt;- lists:seq(1,20)],
+     1..|    ok.
+</pre>
+</body>
+</html>

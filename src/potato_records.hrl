@@ -22,3 +22,6 @@
 
 -define(transaction, [game_data, nonce, player_id, consensus_data]).
 -define(consensus_transaction_data, [signature, chain_id]).
+
+% useful
+% Trace = try throw(42) catch 42 -> erlang:get_stacktrace() end,

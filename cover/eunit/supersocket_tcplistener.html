@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/supersocket_tcplistener.html</title>
+</head><body style='background-color: white; color: black'>
+<pre>
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/p2p/supersocket_tcplistener.erl by COVER 2018-10-27 at 23:14:36
+
+****************************************************************************
+
+        |  -module(supersocket_tcplistener).
+        |  -behaviour(gen_server).
+        |  
+        |  -record(state, {name, % connection id nonsense idk
+        |  next, % next step, used when initializing
+        |  socket}). % the current socket
+        |  
+        |  -export([start_link/1]).
+        |  -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+        |  
+        |  
+        |  -define(TIME, 800).
+        |  -define(EXP, 50).
+        |  
+        |  start_link(Socket) -&gt;
+    28..|    gen_server:start_link(?MODULE, Socket, []).
+        |  
+        |  init(Socket) -&gt;
+        |    %% Because accepting a connection is a blocking function call,
+        |    %% we can not do it in here. Forward to the server loop!
+    28..|    gen_server:cast(self(), accept),
+    28..|    {ok, #state{socket=Socket}}.
+        |  
+        |  %% Never used
+        |  handle_call(_E, _From, State) -&gt;
+<font color=red>     0..|    {noreply, State}.</font>
+        |  
+        |  handle_cast(accept, S = #state{socket=ListenSocket}) -&gt;
+        |    %% listen for connection
+    28..|    {ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
+        |  
+        |    %% once we get a connection, start a new listener to replace us
+     8..|    supersocket:start_socket(),
+        |  
+        |    %% server initiates handshake stuff
+     8..|    ok = gen_tcp:send(AcceptSocket, &lt;&lt;"Welcome to my 🥔🥔🥔 server\n"&gt;&gt;),
+        |  
+        |    %% once we send out handshake, start actively listening for a response
+     8..|    ok = inet:setopts(AcceptSocket, [{active, once}]),
+        |  
+        |    %% go to next step
+     8..|    {noreply, S#state{socket=AcceptSocket, next=handshake}}.
+        |  
+        |  
+        |  %% Let's get rid of the white space and ignore whatever's after.
+        |  %% makes it simpler to deal with telnet.
+        |  line(Str) -&gt;
+<font color=red>     0..|    hd(string:tokens(Str, "\r\n ")).</font>
+        |  
+        |  %% use handle info to pick up on active tcp messages
+        |  handle_info({tcp, _Socket, Str}, S = #state{next=handshake}) -&gt;
+<font color=red>     0..|    Name = line(Str),</font>
+        |    %% TODO figure out who connected and send message to something else to start a worker to handle it
+        |    %% make sure to pass on ownership of socket to the next owner
+        |    %% make sure the next owner sts socket to {active, once}
+        |    %%  make sure there's no race condition where tcp packets get lost in ownership transfer (would be awful if there was...)
+        |  
+        |  
+<font color=red>     0..|    {noreply, S#state{name=Name, next=done}};</font>
+        |  
+        |  %% TODO log errors or whatever.
+        |  handle_info({tcp_closed, _Socket}, S) -&gt;
+     8..|    {stop, normal, S};
+        |  handle_info({tcp_error, _Socket, _}, S) -&gt;
+<font color=red>     0..|    {stop, normal, S};</font>
+        |  handle_info(E, S) -&gt;
+<font color=red>     0..|    io:format("unexpected: ~p~n", [E]),</font>
+<font color=red>     0..|    {noreply, S}.</font>
+        |  
+        |  
+        |  code_change(_OldVsn, State, _Extra) -&gt;
+<font color=red>     0..|    {ok, State}.</font>
+        |  terminate(normal, _State) -&gt;
+     8..|    ok;
+        |  terminate(_Reason, _State) -&gt;
+<font color=red>     0..|    io:format("terminate reason: ~p~n", [_Reason]).</font>
+</pre>
+</body>
+</html>
