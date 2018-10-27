@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/pop_chain.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_chain.erl by COVER 2018-10-27 at 23:07:19
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_chain.erl by COVER 2018-10-27 at 23:14:36
 
 ****************************************************************************
 
@@ -37,49 +37,49 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  -include("potato_records.hrl").
         |  
         |  map_key_match_assert(Map, KeyList) -&gt;
-   194..|      K1 = lists:sort(maps:keys(Map)),
-   194..|      K2 = lists:sort(KeyList),
-   194..|      ?assertEqual(K1, K2, {"key mismatch", K1, K2}),
-   194..|      ok.
+   202..|      K1 = lists:sort(maps:keys(Map)),
+   202..|      K2 = lists:sort(KeyList),
+   202..|      ?assertEqual(K1, K2, {"key mismatch", K1, K2}),
+   202..|      ok.
         |  
         |  transaction_map_structure_assert(T) when is_map(T) -&gt;
-     3..|      map_key_match_assert(T, ?transaction),
+     5..|      map_key_match_assert(T, ?transaction),
         |      
-     3..|      CD = maps:get(consensus_data, T),
-     3..|      map_key_match_assert(CD, ?consensus_transaction_data),
+     5..|      CD = maps:get(consensus_data, T),
+     5..|      map_key_match_assert(CD, ?consensus_transaction_data),
         |      
-     3..|      ok.
+     5..|      ok.
         |  
         |  check_block_map_structure(B) when is_map(B) -&gt;
-    94..|      map_key_match_assert(B, ?block),
+    96..|      map_key_match_assert(B, ?block),
         |      
-    94..|      CD = maps:get(consensus_data, B),
-    94..|      map_key_match_assert(CD, ?consensus_block_data),
+    96..|      CD = maps:get(consensus_data, B),
+    96..|      map_key_match_assert(CD, ?consensus_block_data),
         |      
-    94..|      TL = maps:get(transactions, B),
-    94..|      lists:map(fun transaction_map_structure_assert/1, TL),
+    96..|      TL = maps:get(transactions, B),
+    96..|      lists:map(fun transaction_map_structure_assert/1, TL),
         |      
-    94..|      ok.
+    96..|      ok.
         |      
         |  %% get entry in block's consensus data
-    80..|  get_block_cd(Entry, Block) -&gt; maps:get(Entry, maps:get(consensus_data, Block)).
+    82..|  get_block_cd(Entry, Block) -&gt; maps:get(Entry, maps:get(consensus_data, Block)).
         |  
         |  %% @doc Computes hash of the block.
         |  compute_block_hash(Block) when is_map(Block) -&gt;
-   116..|      #{consensus_data := CD} = Block,
-   116..|      CleanBlock = Block#{
+   118..|      #{consensus_data := CD} = Block,
+   118..|      CleanBlock = Block#{
         |  	  this_id := undefined, 
         |  	  consensus_data := CD#{signature := undefined}
         |  	 },
-   116..|      my_crypto:hash( my_serializer:serialize_object(CleanBlock) ).
+   118..|      my_crypto:hash( my_serializer:serialize_object(CleanBlock) ).
         |  
         |  %% @doc Computes hash of the transaction.
         |  compute_transaction_hash(Transaction) when is_map(Transaction) -&gt;
-     4..|      CD = maps:get(consensus_data, Transaction),
-     4..|      CleanTransaction = Transaction#{
+     5..|      CD = maps:get(consensus_data, Transaction),
+     5..|      CleanTransaction = Transaction#{
         |  	  consensus_data := CD#{signature := undefined}
         |  	 },
-     4..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
+     5..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
         |  
         |  %% @doc Inserts signature into the block.
         |  %% 
@@ -115,27 +115,27 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
      2..|      T#{consensus_data := CD#{signature := Signature}}.
         |  
         |  check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) -&gt;
-     2..|      transaction_map_structure_assert(Transaction),
+     3..|      transaction_map_structure_assert(Transaction),
         |  
         |      #{
         |        consensus_data := CD,
         |        player_id := PlrKey
-     2..|       } = Transaction,
+     3..|       } = Transaction,
         |  
         |      #{
         |        signature := PlrSgn,
         |        chain_id := TrChainId
-     2..|       } = CD,
+     3..|       } = CD,
         |  
-     2..|      Hash = compute_transaction_hash(Transaction),
+     3..|      Hash = compute_transaction_hash(Transaction),
         |  
         |      %% verify signature's correctness
-     2..|      ?assert(my_crypto:verify(Hash, PlrSgn, PlrKey), "transaction signature failed verification"),
+     3..|      ?assert(my_crypto:verify(Hash, PlrSgn, PlrKey), "transaction signature failed verification"),
         |  
         |      %% compare ChainId
-     2..|      ?assertEqual(TrChainId, ChainId, "bad transaction ChainId"),
+     3..|      ?assertEqual(TrChainId, ChainId, "bad transaction ChainId"),
         |  
-     2..|      ok.
+     3..|      ok.
         |      
         |  %% @doc Adds block to blocktree.
         |  %% 
@@ -149,7 +149,7 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |        -&gt;
         |  
         |      %% checks maps for block and transactions inside
-    61..|      check_block_map_structure(Block),
+    63..|      check_block_map_structure(Block),
         |  
         |      #pop_chain{
         |         pop_config_data = #pop_config_data{
@@ -159,7 +159,7 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  			    chain_id = MainChainId
         |  			   },
         |         tree_data = TD0
-    61..|        } = ProtocolData,
+    63..|        } = ProtocolData,
         |  
         |      
         |  
@@ -173,63 +173,63 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  			   verifier_index := VerIndex,
         |  			   timestamp := Tmp
         |  			  }
-    61..|        } = Block,
+    63..|        } = Block,
         |      
         |      
         |      %% check that signer is one of the verifiers
         |      #verifier_public_info{
         |         index = VerIndexChk, 
         |         public_key = PubKeyChk
-    61..|        } = array:get(VerIndex, VerifiersArr),
+    63..|        } = array:get(VerIndex, VerifiersArr),
         |  
-    61..|      ?assertEqual(VerIndex, VerIndexChk, "indices don't match"),
-    61..|      ?assertEqual(VerKey, PubKeyChk, "keys don't match"),
+    63..|      ?assertEqual(VerIndex, VerIndexChk, "indices don't match"),
+    63..|      ?assertEqual(VerKey, PubKeyChk, "keys don't match"),
         |  
         |  
         |      %% check that the time is correct for this verifier
         |      %% (also check that it is not too far into the future)
         |      %% should be larger, and have the correct remainder
         |      
-    61..|      PreviousBlock = blocktree:get_block_by_id(PrevId, TD0),
-    59..|      PreviousBlockTimestamp = maps:get(timestamp, maps:get(consensus_data, PreviousBlock)),
+    63..|      PreviousBlock = blocktree:get_block_by_id(PrevId, TD0),
+    61..|      PreviousBlockTimestamp = maps:get(timestamp, maps:get(consensus_data, PreviousBlock)),
         |  
-    59..|      ?assert(PreviousBlockTimestamp &lt; Tmp, "time should be larger than previous"),
-    59..|      ?assert(Tmp - TimeDesyncMargin &lt; CurrentTime, "block cannot be in the future"),
+    61..|      ?assert(PreviousBlockTimestamp &lt; Tmp, "time should be larger than previous"),
+    61..|      ?assert(Tmp - TimeDesyncMargin &lt; CurrentTime, "block cannot be in the future"),
         |      
-    59..|      VerNum = array:size(VerifiersArr),
-    59..|      ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
+    61..|      VerNum = array:size(VerifiersArr),
+    61..|      ?assertEqual(Tmp rem (TimeBetween * VerNum), TimeBetween * VerIndex, "bad time for that verifier"),
         |      
         |      %% check ThisId hash correctness
-    58..|      Hash = ThisId,
-    58..|      ?assertEqual(Hash, compute_block_hash(Block), "incorrect hash"),
+    60..|      Hash = ThisId,
+    60..|      ?assertEqual(Hash, compute_block_hash(Block), "incorrect hash"),
         |  
         |      %% check signature's correctness
-    58..|      ?assert(my_crypto:verify(Hash, VerSgn, VerKey), "signature failed verification"),
+    60..|      ?assert(my_crypto:verify(Hash, VerSgn, VerKey), "signature failed verification"),
         |  
         |      %% (OPTIONAL) check sequence of different verifiers
         |  
         |      %% Verify transactions
-    58..|      lists:map(fun(T) -&gt; check_transaction_correctness(T, MainChainId) end, BlockTransactionsList),
+    60..|      lists:map(fun(T) -&gt; check_transaction_correctness(T, MainChainId) end, BlockTransactionsList),
         |  
         |      %% add this block to tree_data 
         |      %% this can trigger errors if the block if poorly formed
         |      %% also fails if block is orphan or already exists
-    58..|      TD1 = blocktree:add_block_in_order(Block, TD0),
+    60..|      TD1 = blocktree:add_block_in_order(Block, TD0),
         |  
         |      %% current last block keeps track of the last block in the chain
         |      %% update it, if new block is the last one
         |  
         |  
-    55..|      CurrentHeadBlock = ProtocolData#pop_chain.head_block,
-    55..|      HeadBlock = resolve_fork(Block, CurrentHeadBlock, TD1),
+    57..|      CurrentHeadBlock = ProtocolData#pop_chain.head_block,
+    57..|      HeadBlock = resolve_fork(Block, CurrentHeadBlock, TD1),
         |  
         |      %% ?debugVal(CurrentHeadBlock),
         |      %% ?debugVal(Block),
         |      %% ?debugVal(HeadBlock),
         |  
-    55..|      NewProtocolData = ProtocolData#pop_chain{tree_data = TD1, head_block = HeadBlock},
+    57..|      NewProtocolData = ProtocolData#pop_chain{tree_data = TD1, head_block = HeadBlock},
         |  
-    55..|      NewProtocolData.
+    57..|      NewProtocolData.
         |  
         |  %% @doc Initialize protocol data.
         |  %% 
@@ -277,33 +277,33 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |        is_map(B2),
         |        is_record(TreeData, tree_data) -&gt;
         |  
-    58..|      H1 = maps:get(height, B1),
-    58..|      H2 = maps:get(height, B2),
+    60..|      H1 = maps:get(height, B1),
+    60..|      H2 = maps:get(height, B2),
         |  
-    58..|      if 
+    60..|      if 
         |  	H1 &gt; H2 -&gt; 
-    42..|  	    B1;
+    43..|  	    B1;
         |  
         |  	H2 &gt; H1 -&gt; 
      8..|  	    B2;
         |  
         |  	H2 == H1 -&gt; 
-     8..|  	    Branch = resolve_fork_select_branch(B1, B2, TreeData),
-     8..|  	    if 
+     9..|  	    Branch = resolve_fork_select_branch(B1, B2, TreeData),
+     9..|  	    if 
         |  		Branch == first -&gt;
      4..|  		    B1;
         |  		Branch == second -&gt;
-     4..|  		    B2
+     5..|  		    B2
         |  	    end
         |  	end.
         |  
         |  resolve_fork_select_branch(B1, B2, TreeData) -&gt;
-    17..|      Id1 = maps:get(previous_id, B1),
-    17..|      Id2 = maps:get(previous_id, B2),
+    18..|      Id1 = maps:get(previous_id, B1),
+    18..|      Id2 = maps:get(previous_id, B2),
         |      
-    17..|      if 
+    18..|      if 
         |  	Id1 == Id2 -&gt;
-     8..|  	    resolve_fork_same_parent(B1, B2);
+     9..|  	    resolve_fork_same_parent(B1, B2);
         |  	Id1 /= Id2 -&gt;
      9..|  	    BB1 = blocktree:get_block_by_id(Id1, TreeData),
      9..|  	    BB2 = blocktree:get_block_by_id(Id2, TreeData),
@@ -311,22 +311,22 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |      end.
         |  
         |  resolve_fork_same_parent(B1, B2) -&gt;
-     8..|      T1 = get_block_cd(timestamp, B1),
-     8..|      T2 = get_block_cd(timestamp, B2),
+     9..|      T1 = get_block_cd(timestamp, B1),
+     9..|      T2 = get_block_cd(timestamp, B2),
         |  
-     8..|      if 
+     9..|      if 
         |  	T1 &lt; T2 -&gt;
      3..|  	    first;
         |  	T2 &lt; T1 -&gt;
      4..|  	    second;
         |  	T1 == T2 -&gt;
-     1..|  	    Id1 = maps:get(this_id, B1),
-     1..|  	    Id2 = maps:get(this_id, B2),
-     1..|  	    if 
+     2..|  	    Id1 = maps:get(this_id, B1),
+     2..|  	    Id2 = maps:get(this_id, B2),
+     2..|  	    if 
         |  		Id1 &lt; Id2 -&gt;
      1..|  		    first;
         |  		Id2 &lt; Id1 -&gt;
-<font color=red>     0..|  		    second</font>
+     1..|  		    second
         |  	    end
         |  	    
         |      end.

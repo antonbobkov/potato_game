@@ -140,6 +140,8 @@ basic_test() ->
     %% same verifier adds two different blocks
     T = make_transaction(PrivateKey, PublicKey, 0, hype_chain),
     B1T = make_block(genesis, 1, PrivateKey, PublicKey, 1, 110, [T]),
+    
+    lists:foldl(FoldFn, PD0, [B1T, B1]),
     PDT = lists:foldl(FoldFn, PD0, [B1, B1T]),
 
     MinHash = min(maps:get(this_id, B1), maps:get(this_id, B1T)),

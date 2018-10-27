@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/blocktree.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/blocktree.erl by COVER 2018-10-27 at 23:07:19
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/blocktree.erl by COVER 2018-10-27 at 23:14:36
 
 ****************************************************************************
 
@@ -72,17 +72,17 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  -spec transaction_list_check_if_in_order(playerid(), txlist()) -&gt; ok.
         |  transaction_list_check_if_in_order(_, List) -&gt;
-    20..|      NonceList = lists:map(fun (T) -&gt; maps:get(nonce, T) end, List),
-    20..|      [FirstNonce | _] = NonceList,
-    20..|      Sz = length(List),
-    20..|      ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
+    21..|      NonceList = lists:map(fun (T) -&gt; maps:get(nonce, T) end, List),
+    21..|      [FirstNonce | _] = NonceList,
+    21..|      Sz = length(List),
+    21..|      ProperNonceList = lists:seq(FirstNonce, FirstNonce + Sz - 1),
         |  
-    20..|      ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
+    21..|      ?assertEqual(NonceList, ProperNonceList, "bad nonce order").
         |  
         |  -spec get_first_nonce_in_transaction_list(playerid(), txlist()) -&gt; nonce().
         |  get_first_nonce_in_transaction_list(_, TransactionList) -&gt;
-    20..|      [FirstTransaction | _ ] = TransactionList,
-    20..|      maps:get(nonce, FirstTransaction).
+    21..|      [FirstTransaction | _ ] = TransactionList,
+    21..|      maps:get(nonce, FirstTransaction).
         |  
         |  -spec get_last_nonce_in_transaction_list(txlist()) -&gt; nonce().
         |  get_last_nonce_in_transaction_list(TransactionList) -&gt;
@@ -93,35 +93,35 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  -spec search_previous_transaction_nonce_for_player(playerid(), blockmap(), blockid()) -&gt; nonce().
         |  search_previous_transaction_nonce_for_player(_, _, BlockId) when BlockId == undefined -&gt;
-    11..|      -1;
+    12..|      -1;
         |  search_previous_transaction_nonce_for_player(PlayerId, BlockMap, BlockId) -&gt;
-    23..|      {ok, Block} = maps:find(BlockId, BlockMap),
-    23..|      #{previous_id := PrevBlockId, transactions := BlockTransactionsList} = Block,
+    24..|      {ok, Block} = maps:find(BlockId, BlockMap),
+    24..|      #{previous_id := PrevBlockId, transactions := BlockTransactionsList} = Block,
         |  
-    23..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+    24..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
         |  
-    23..|      case maps:find(PlayerId, BlockTransactionsMap) of
+    24..|      case maps:find(PlayerId, BlockTransactionsMap) of
         |  	{ok, TransactionList} -&gt;
     14..|  	    get_last_nonce_in_transaction_list(TransactionList);
         |  	error -&gt;
-     9..|  	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
+    10..|  	    search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevBlockId)
         |      end.
         |  
         |  -spec transaction_map_from_list(txlist()) -&gt; playertxmap().
         |  transaction_map_from_list(ListR) -&gt;
-    94..|      List = lists:reverse(ListR),
-    94..|      lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
+    97..|      List = lists:reverse(ListR),
+    97..|      lists:foldl(fun transaction_map_from_list/2, maps:new(), List).
         |  
         |  transaction_map_from_list(T, Map) -&gt;
-   126..|      Id = maps:get(player_id, T),
+   127..|      Id = maps:get(player_id, T),
         |  
-   126..|      case maps:find(Id, Map) of
+   127..|      case maps:find(Id, Map) of
         |  	{ok, OldList} -&gt;
     56..|  	    NewList = [T | OldList];
         |  	error -&gt;
-    70..|  	    NewList = [T]
+    71..|  	    NewList = [T]
         |      end,
-   126..|      maps:put(Id, NewList, Map).
+   127..|      maps:put(Id, NewList, Map).
         |  
         |  %% @doc Adds a new block to the blocktree.
         |  %%
@@ -150,21 +150,21 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |    when is_map(Block),
         |         is_record(TreeData, tree_data) -&gt;
         |  
-    72..|      #tree_data{block_map = BlockMap} = TreeData,
-    72..|      #{previous_id := PrevId, this_id := ThisId, height := Height, transactions := BlockTransactionsList} = Block,
+    74..|      #tree_data{block_map = BlockMap} = TreeData,
+    74..|      #{previous_id := PrevId, this_id := ThisId, height := Height, transactions := BlockTransactionsList} = Block,
         |  
-    72..|      ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),
+    74..|      ?assertEqual(error, maps:find(ThisId, BlockMap), "this_id already exists"),
         |  
-    71..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
+    73..|      BlockTransactionsMap = transaction_map_from_list(BlockTransactionsList),
         |  
-    71..|      maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
+    73..|      maps:map(fun transaction_list_check_if_in_order/2, BlockTransactionsMap),
         |  
         |      %% check_that_player_ids_are_correct(BlockTransactionsMap),
         |  
-    71..|      FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
+    73..|      FirstNonceMap = maps:map(fun get_first_nonce_in_transaction_list/2, BlockTransactionsMap),
         |  
-    71..|      MapEmpty = maps:size(BlockMap) == 0,
-    71..|      if
+    73..|      MapEmpty = maps:size(BlockMap) == 0,
+    73..|      if
         |  	MapEmpty -&gt;
     10..|  	    ?assertEqual(Height, 0, "genesis, bad height"),
         |  
@@ -175,23 +175,23 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
     10..|  	    ?assertEqual(FirstNonceMap,  ZeroNonceMap, "genesis, transactions not starting with zero");
         |  
         |  	not MapEmpty -&gt;
-    61..|  	    Result = maps:find(PrevId, BlockMap),
+    63..|  	    Result = maps:find(PrevId, BlockMap),
         |  
-    61..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
+    63..|  	    ?assertMatch({ok, _}, Result, "cannot find previous_id"),
         |  
-    61..|  	    {ok, PrevBlock} = Result,
+    63..|  	    {ok, PrevBlock} = Result,
         |  
-    61..|  	    ?assertEqual(Height, maps:get(height, PrevBlock) + 1, "bad height"),
+    63..|  	    ?assertEqual(Height, maps:get(height, PrevBlock) + 1, "bad height"),
         |  
-    59..|  	    MapFn = fun(PlayerId, _) -&gt; 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
-    59..|  	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
+    61..|  	    MapFn = fun(PlayerId, _) -&gt; 1 + search_previous_transaction_nonce_for_player(PlayerId, BlockMap, PrevId) end,
+    61..|  	    FirstNonceMapProper = maps:map(MapFn, BlockTransactionsMap),
         |  
-    59..|  	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
+    61..|  	    ?assertEqual(FirstNonceMap, FirstNonceMapProper, "transactions not starting with correct nonce")
         |      end,
         |  
-    69..|      NewBlockMap = maps:put(ThisId, Block, BlockMap),
+    71..|      NewBlockMap = maps:put(ThisId, Block, BlockMap),
         |  
-    69..|      TreeData#tree_data{block_map = NewBlockMap}.
+    71..|      TreeData#tree_data{block_map = NewBlockMap}.
         |  
         |  %% @doc Generates new block after block with PreviousBlockId.
         |  %% 
@@ -242,12 +242,12 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  get_block_by_id(Id, TreeData)
         |    when is_record(TreeData, tree_data) -&gt;
         |  
-    83..|      #tree_data{block_map = BlockMap} = TreeData,
-    83..|      Result = maps:find(Id, BlockMap),
+    85..|      #tree_data{block_map = BlockMap} = TreeData,
+    85..|      Result = maps:find(Id, BlockMap),
         |  
-    83..|      ?assertMatch({ok, _}, Result, "cannot find block by id"),
-    79..|      {ok, Block} = Result,
-    79..|      Block.
+    85..|      ?assertMatch({ok, _}, Result, "cannot find block by id"),
+    81..|      {ok, Block} = Result,
+    81..|      Block.
         |  
         |  %% -spec get_all_longest_branches(treedata()) -&gt; [block()].
         |  %% get_all_longest_branches(TreeData)
