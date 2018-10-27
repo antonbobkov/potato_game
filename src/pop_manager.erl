@@ -13,8 +13,7 @@
 
 -export([
 	 new/2,
-	 on_net_message/5,
-	 loop/1
+	 on_net_message/5
 	]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -48,7 +47,6 @@ get_block_status(Hash, PopManager) ->
        unbound_blocks = UB
       } = PopManager,
     
-
     R1 = pop_chain:find_block_by_id(Hash, PC),
     case R1 of
 	{ok, _} ->
@@ -111,12 +109,12 @@ compute_block_hash_range(UnknownBlock, KnownBlock, PC, AccList) ->
 	    %% decrement higher block, or both if equal height
 	    %% each time Unknown is decremented, add its hash to the list
 
-	    if UnknownHeight >= KnownHeight -> 	
+	    if UnknownHeight > KnownHeight -> 	
 		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
 	            KnownBlockNew = KnownBlock,
 	            AccListNew = [UnknownId | AccList];
 
-	       UnknownHeight =< KnownHeight ->
+	       UnknownHeight < KnownHeight ->
 		    UnknownBlockNew = UnknownBlock, 
 	            KnownBlockNew = get_prev(KnownBlock, PC),
 	            AccListNew = AccList;
@@ -231,7 +229,8 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 
     FoldFn = 
 	fun(Block, PM) ->
-		BlockStatus = get_block_status(Block, PM),
+		Hash = maps:get(this_id, Block),
+		BlockStatus = get_block_status(Hash, PM),
 
 		if (Age == new) and (BlockStatus == unknown) ->
 			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(Block, PM));
@@ -303,16 +302,16 @@ on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
 
     PopManager#pop_manager{pop_chain = NewPC}.
 
-%% @doc Loop that handles messages.
+%% doc Loop that handles messages.
 
-loop(PopManager) ->
-    receive 
-	{net, SenderAddress, CurrentTime, MsgId, Data} ->
-	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
-	    loop(NewPopManager);
-	exit ->
-	    done;
-	Unexpected ->
-	    ?debugVal(Unexpected),
-	    erlang:error("unexpected message")
-    end.
+%% loop(PopManager) ->
+%%     receive 
+%% 	{net, SenderAddress, CurrentTime, MsgId, Data} ->
+%% 	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
+%% 	    loop(NewPopManager);
+%% 	exit ->
+%% 	    done;
+%% 	Unexpected ->
+%% 	    ?debugVal(Unexpected),
+%% 	    erlang:error("unexpected message")
+%%     end.

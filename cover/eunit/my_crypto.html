@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/my_crypto.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/my_crypto.erl by COVER 2018-10-27 at 19:57:10
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/my_crypto.erl by COVER 2018-10-27 at 23:07:19
 
 ****************************************************************************
 
@@ -41,28 +41,28 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  %% cut hash down to three bytes
         |  hash_debug(Bin) -&gt; 
-   130..|      Full = crypto:hash(sha256, Bin),
-   130..|      Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
+   132..|      Full = crypto:hash(sha256, Bin),
+   132..|      Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
         |  
         |      %% Copied this online :cat_scream:
-   130..|      HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || &lt;&lt;X:8&gt;&gt; &lt;= Part ]),
+   132..|      HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || &lt;&lt;X:8&gt;&gt; &lt;= Part ]),
         |  
-   130..|      HexString.
+   132..|      HexString.
         |  
         |  drop_ext(FileName) -&gt;
-   134..|      [Out | _] = string:split(FileName, "."),
-   134..|      Out.
+   136..|      [Out | _] = string:split(FileName, "."),
+   136..|      Out.
         |  
-   134..|  sign_debug(Hash, AnyKey) -&gt; Hash ++ " " ++ drop_ext(AnyKey).
-    92..|  verify_debug(Hash, Signature, PublicKey) -&gt; Signature == sign_debug(Hash, PublicKey).
+   136..|  sign_debug(Hash, AnyKey) -&gt; Hash ++ " " ++ drop_ext(AnyKey).
+    94..|  verify_debug(Hash, Signature, PublicKey) -&gt; Signature == sign_debug(Hash, PublicKey).
      6..|  read_file_key_debug(private, FileName) -&gt; FileName;
      6..|  read_file_key_debug(public, FileName) -&gt; FileName.
         |  
         |  -ifdef(MY_CRYPTO_DEBUG).
         |  
-   129..|  hash(Bin) -&gt; hash_debug(Bin).
+   131..|  hash(Bin) -&gt; hash_debug(Bin).
     40..|  sign(Hash, PrivateKey) -&gt; sign_debug(Hash, PrivateKey).
-    89..|  verify(Hash, Signature, PubKey) -&gt; verify_debug(Hash, Signature, PubKey).
+    91..|  verify(Hash, Signature, PubKey) -&gt; verify_debug(Hash, Signature, PubKey).
      4..|  read_file_key(private, FileName) -&gt; read_file_key_debug(private, FileName);
      4..|  read_file_key(public, FileName) -&gt; read_file_key_debug(public, FileName).
         |  

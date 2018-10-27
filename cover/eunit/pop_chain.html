@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/eunit/pop_chain.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_chain.erl by COVER 2018-10-27 at 19:57:10
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_chain.erl by COVER 2018-10-27 at 23:07:19
 
 ****************************************************************************
 
@@ -75,11 +75,11 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  %% @doc Computes hash of the transaction.
         |  compute_transaction_hash(Transaction) when is_map(Transaction) -&gt;
-     2..|      CD = maps:get(consensus_data, Transaction),
-     2..|      CleanTransaction = Transaction#{
+     4..|      CD = maps:get(consensus_data, Transaction),
+     4..|      CleanTransaction = Transaction#{
         |  	  consensus_data := CD#{signature := undefined}
         |  	 },
-     2..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
+     4..|      my_crypto:hash( my_serializer:serialize_object(CleanTransaction) ).
         |  
         |  %% @doc Inserts signature into the block.
         |  %% 
@@ -105,14 +105,14 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  apply_transaction_signature(Signature, T) 
         |    when is_map(T) -&gt;
-<font color=red>     0..|      Hash = compute_transaction_hash(T),</font>
-<font color=red>     0..|      PubKey = maps:get(player_id, T),</font>
+     2..|      Hash = compute_transaction_hash(T),
+     2..|      PubKey = maps:get(player_id, T),
         |  
-<font color=red>     0..|      ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),</font>
+     2..|      ?assert(true == my_crypto:verify(Hash, Signature, PubKey)),
         |  
-<font color=red>     0..|      CD = maps:get(consensus_data, T),</font>
+     2..|      CD = maps:get(consensus_data, T),
         |      
-<font color=red>     0..|      T#{consensus_data := CD#{signature := Signature}}.</font>
+     2..|      T#{consensus_data := CD#{signature := Signature}}.
         |  
         |  check_transaction_correctness(Transaction, ChainId) when is_map(Transaction) -&gt;
      2..|      transaction_map_structure_assert(Transaction),
@@ -400,7 +400,7 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  find_block_by_id(Id, PC)
         |    when is_record(PC, pop_chain) -&gt;
-    80..|      maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
+    99..|      maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
         |  
         |  %% @doc Gets first block.
      1..|  get_genisys_block(PC) -&gt; PC#pop_chain.genisys_block.

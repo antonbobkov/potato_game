@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/aggregate/pop_manager.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_manager.erl by COVER 2018-10-27 at 19:57:10
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pop_manager.erl by COVER 2018-10-27 at 23:07:19
 
 ****************************************************************************
 
@@ -24,8 +24,7 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  -export([
         |  	 new/2,
-        |  	 on_net_message/5,
-        |  	 loop/1
+        |  	 on_net_message/5
         |  	]).
         |  
         |  -include_lib("eunit/include/eunit.hrl").
@@ -57,27 +56,26 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |      #pop_manager{
         |         pop_chain = PC,
         |         unbound_blocks = UB
-    23..|        } = PopManager,
+    27..|        } = PopManager,
         |      
-        |  
-    23..|      R1 = pop_chain:find_block_by_id(Hash, PC),
-    23..|      case R1 of
+    27..|      R1 = pop_chain:find_block_by_id(Hash, PC),
+    27..|      case R1 of
         |  	{ok, _} -&gt;
-     5..|  	    in_chain;
+     8..|  	    in_chain;
         |  	error -&gt;
-    18..|  	    R2 = maps:find(Hash, UB),
-    18..|  	    case R2 of
+    19..|  	    R2 = maps:find(Hash, UB),
+    19..|  	    case R2 of
         |  		{ok, _} -&gt;
-<font color=red>     0..|  		    unbound;</font>
+     2..|  		    unbound;
         |  		error -&gt;
-    18..|  		    unknown
+    17..|  		    unknown
         |  	    end
         |      end.
         |  
         |  %% get previous block
         |  get_prev(Block, PC) -&gt;
-    18..|      {ok, Prev} = pop_chain:find_block_by_id(maps:get(previous_id, Block), PC),
-    18..|      Prev.
+    26..|      {ok, Prev} = pop_chain:find_block_by_id(maps:get(previous_id, Block), PC),
+    26..|      Prev.
         |  
         |  %% get n'th previous block, stop at genisys block
         |  get_nth_prev_block(N, Block, PC) -&gt;
@@ -102,40 +100,40 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  %% and return a array of hashes of those blocks
         |  
         |  compute_block_hash_range(UnknownBlockHash, KnownBlockHash, PopManager) -&gt;
-     3..|      PC = PopManager#pop_manager.pop_chain,
-     3..|      {ok, UnknownBlock} = pop_chain:find_block_by_id(UnknownBlockHash, PC),
-     3..|      {ok, KnownBlock} = pop_chain:find_block_by_id(KnownBlockHash, PC),
+     4..|      PC = PopManager#pop_manager.pop_chain,
+     4..|      {ok, UnknownBlock} = pop_chain:find_block_by_id(UnknownBlockHash, PC),
+     4..|      {ok, KnownBlock} = pop_chain:find_block_by_id(KnownBlockHash, PC),
         |  
-     3..|      compute_block_hash_range(UnknownBlock, KnownBlock, PC, []).
+     4..|      compute_block_hash_range(UnknownBlock, KnownBlock, PC, []).
         |  
         |  compute_block_hash_range(UnknownBlock, KnownBlock, PC, AccList) -&gt;
-    18..|      UnknownId = maps:get(this_id, UnknownBlock),
-    18..|      KnownId = maps:get(this_id, KnownBlock),
+    19..|      UnknownId = maps:get(this_id, UnknownBlock),
+    19..|      KnownId = maps:get(this_id, KnownBlock),
         |  
-    18..|      UnknownHeight = maps:get(height, UnknownBlock),
-    18..|      KnownHeight = maps:get(height, KnownBlock),
+    19..|      UnknownHeight = maps:get(height, UnknownBlock),
+    19..|      KnownHeight = maps:get(height, KnownBlock),
         |  
-    18..|      if UnknownId == KnownId -&gt;
-     3..|  	    AccList;  % done, found common parent
+    19..|      if UnknownId == KnownId -&gt;
+     4..|  	    AccList;  % done, found common parent
         |  
         |         UnknownId /= KnownId -&gt;
         |  	    %% decrement higher block, or both if equal height
         |  	    %% each time Unknown is decremented, add its hash to the list
         |  
-    15..|  	    if UnknownHeight &gt;= KnownHeight -&gt; 	
-    10..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
-    10..|  	            KnownBlockNew = KnownBlock,
-    10..|  	            AccListNew = [UnknownId | AccList];
+    15..|  	    if UnknownHeight &gt; KnownHeight -&gt; 	
+     6..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
+     6..|  	            KnownBlockNew = KnownBlock,
+     6..|  	            AccListNew = [UnknownId | AccList];
         |  
-        |  	       UnknownHeight =&lt; KnownHeight -&gt;
-     5..|  		    UnknownBlockNew = UnknownBlock, 
-     5..|  	            KnownBlockNew = get_prev(KnownBlock, PC),
-     5..|  	            AccListNew = AccList;
+        |  	       UnknownHeight &lt; KnownHeight -&gt;
+     1..|  		    UnknownBlockNew = UnknownBlock, 
+     1..|  	            KnownBlockNew = get_prev(KnownBlock, PC),
+     1..|  	            AccListNew = AccList;
         |  
         |  	       UnknownHeight == KnownHeight -&gt;
-<font color=red>     0..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), </font>
-<font color=red>     0..|  	            KnownBlockNew = get_prev(KnownBlock, PC),</font>
-<font color=red>     0..|  	            AccListNew = [UnknownId | AccList]</font>
+     8..|  		    UnknownBlockNew = get_prev(UnknownBlock, PC), 
+     8..|  	            KnownBlockNew = get_prev(KnownBlock, PC),
+     8..|  	            AccListNew = [UnknownId | AccList]
         |  	    end,
         |  
     15..|  	    compute_block_hash_range(UnknownBlockNew, KnownBlockNew, PC, AccListNew)
@@ -190,32 +188,32 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
         |  add_block_any_order(Block, CurrentTime, PopManager) -&gt;
         |  
-    13..|      PC = PopManager#pop_manager.pop_chain,
-    13..|      UnboundMap = PopManager#pop_manager.unbound_blocks,
+    15..|      PC = PopManager#pop_manager.pop_chain,
+    15..|      UnboundMap = PopManager#pop_manager.unbound_blocks,
         |  
-    13..|      ThisId = maps:get(this_id, Block),
-    13..|      PrevId = maps:get(previous_id, Block),
+    15..|      ThisId = maps:get(this_id, Block),
+    15..|      PrevId = maps:get(previous_id, Block),
         |  
-    13..|      R1 = pop_chain:find_block_by_id(ThisId, PC),
-    13..|      case R1 of
+    15..|      R1 = pop_chain:find_block_by_id(ThisId, PC),
+    15..|      case R1 of
         |  	{ok, _} -&gt;
      1..|  	    Status = ignored_duplicate;
         |  	error -&gt;
-    12..|  	    R2 = pop_chain:find_block_by_id(PrevId, PC),
-    12..|  	    case R2 of
+    14..|  	    R2 = pop_chain:find_block_by_id(PrevId, PC),
+    14..|  	    case R2 of
         |  		{ok, _} -&gt;
      8..|  		    Status = added_new;
         |  		error -&gt;
-     4..|  		    Status = unbound
+     6..|  		    Status = unbound
         |  	    end	    
         |      end,
         |  
-    13..|      if Status == added_new -&gt;
+    15..|      if Status == added_new -&gt;
      8..|  	    {Status, add_block_in_order(Block, CurrentTime, PopManager)};
         |  
         |         Status == unbound -&gt;
-     4..|  	    UnboundMapNew = maps:put(ThisId, Block, UnboundMap),
-     4..|  	    {Status, PopManager#pop_manager{unbound_blocks = UnboundMapNew}};
+     6..|  	    UnboundMapNew = maps:put(ThisId, Block, UnboundMap),
+     6..|  	    {Status, PopManager#pop_manager{unbound_blocks = UnboundMapNew}};
         |  
         |         Status == ignored_duplicate -&gt;
      1..|  	    {Status, PopManager}
@@ -242,15 +240,16 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
      5..|      FoldFn = 
         |  	fun(Block, PM) -&gt;
-    13..|  		BlockStatus = get_block_status(Block, PM),
+    15..|  		Hash = maps:get(this_id, Block),
+    15..|  		BlockStatus = get_block_status(Hash, PM),
         |  
-    13..|  		if (Age == new) and (BlockStatus == unknown) -&gt;
+    15..|  		if (Age == new) and (BlockStatus == unknown) -&gt;
      2..|  			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(Block, PM));
-    11..|  		   true -&gt; ok
+    13..|  		   true -&gt; ok
         |  		end,
         |  		
-    13..|  		{_Status, NewPM} = add_block_any_order(Block, CurrentTime, PM),
-    13..|  		NewPM
+    15..|  		{_Status, NewPM} = add_block_any_order(Block, CurrentTime, PM),
+    15..|  		NewPM
         |  	end,
         |  
      5..|      NewPopManager = lists:foldl(FoldFn, PopManager, BlockList),
@@ -259,44 +258,44 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  %% @doc Respond to hash range request by computing and sending the range.
         |  
         |  on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) -&gt;
-     3..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+     4..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
         |  
-     3..|      St1 = get_block_status(KnownHash1, PopManager),
-     3..|      St2 = get_block_status(KnownHash2, PopManager),
+     4..|      St1 = get_block_status(KnownHash1, PopManager),
+     4..|      St2 = get_block_status(KnownHash2, PopManager),
         |      
-     3..|      if 
+     4..|      if 
         |  	St1 == in_chain -&gt;
-     1..|  	    KnownHash = KnownHash1;
+     2..|  	    KnownHash = KnownHash1;
         |  	St2 == in_chain -&gt;
      1..|  	    KnownHash = KnownHash2;
         |  	true -&gt;
      1..|  	    KnownHash = maps:get(this_id, pop_chain:get_genisys_block(PopManager#pop_manager.pop_chain))
         |      end,
         |  
-     3..|      RequestHashList = compute_block_hash_range(UnknownHash, KnownHash, PopManager),
+     4..|      RequestHashList = compute_block_hash_range(UnknownHash, KnownHash, PopManager),
         |  
-     3..|      NetSendFn(SenderAddress, send_block_hashes, RequestHashList),
+     4..|      NetSendFn(SenderAddress, send_block_hashes, RequestHashList),
         |  
-     3..|      PopManager;
+     4..|      PopManager;
         |  
         |  %% @doc Respond to block request by sending all the known requested blocks.
         |  
         |  on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) -&gt;
-     1..|      PC = PopManager#pop_manager.pop_chain,
-     1..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+     2..|      PC = PopManager#pop_manager.pop_chain,
+     2..|      NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
         |  
-     1..|      MapFn = fun (Hash) -&gt;
-     4..|  		    R1 = pop_chain:find_block_by_id(Hash, PC),
-     4..|  		    case R1 of
+     2..|      MapFn = fun (Hash) -&gt;
+     5..|  		    R1 = pop_chain:find_block_by_id(Hash, PC),
+     5..|  		    case R1 of
         |  			{ok, Block} -&gt;
      4..|  			    NetSendFn(SenderAddress, send_full_blocks, {old, [Block]});
         |  			error -&gt;
-<font color=red>     0..|  			    debug_only:error("unexpected request_full_blocks, unknown hash")</font>
+     1..|  			    debug_only:error("unexpected request_full_blocks, unknown hash")
         |  		    end,
      4..|  		    Hash
         |  	    end,
         |  
-     1..|      lists:map(MapFn, HashList),
+     2..|      lists:map(MapFn, HashList),
         |  
      1..|      PopManager;
         |  
@@ -314,19 +313,19 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |  
      1..|      PopManager#pop_manager{pop_chain = NewPC}.
         |  
-        |  %% @doc Loop that handles messages.
+        |  %% doc Loop that handles messages.
         |  
-        |  loop(PopManager) -&gt;
-<font color=red>     0..|      receive </font>
-        |  	{net, SenderAddress, CurrentTime, MsgId, Data} -&gt;
-<font color=red>     0..|  	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),</font>
-<font color=red>     0..|  	    loop(NewPopManager);</font>
-        |  	exit -&gt;
-<font color=red>     0..|  	    done;</font>
-        |  	Unexpected -&gt;
-<font color=red>     0..|  	    ?debugVal(Unexpected),</font>
-<font color=red>     0..|  	    erlang:error("unexpected message")</font>
-        |      end.
+        |  %% loop(PopManager) -&gt;
+        |  %%     receive 
+        |  %% 	{net, SenderAddress, CurrentTime, MsgId, Data} -&gt;
+        |  %% 	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
+        |  %% 	    loop(NewPopManager);
+        |  %% 	exit -&gt;
+        |  %% 	    done;
+        |  %% 	Unexpected -&gt;
+        |  %% 	    ?debugVal(Unexpected),
+        |  %% 	    erlang:error("unexpected message")
+        |  %%     end.
 </pre>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <title>/home/antongml/offline_projects/potato_game/_build/test/cover/aggregate/pending_transactions.html</title>
 </head><body style='background-color: white; color: black'>
 <pre>
-File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pending_transactions.erl by COVER 2018-10-27 at 19:57:10
+File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/potatoserver/ebin/../src/pending_transactions.erl by COVER 2018-10-27 at 23:07:19
 
 ****************************************************************************
 
@@ -152,40 +152,40 @@ File generated from /home/antongml/offline_projects/potato_game/_build/test/lib/
         |         is_record(PendingTx, pending_tx) 
         |         -&gt;
         |  
-    40..|      PlMap = PendingTx#pending_tx.player_map,
+    41..|      PlMap = PendingTx#pending_tx.player_map,
         |  
         |      %% (Key, Value, Acc) applied to PlMap
-    40..|      FoldFn = fun (PlayerId, TxMap, TransactionListAcc) -&gt;
-    17..|  		     R = maps:find(PlayerId, PlayersStartingNonceMap),
-    17..|  		     case R of
+    41..|      FoldFn = fun (PlayerId, TxMap, TransactionListAcc) -&gt;
+    19..|  		     R = maps:find(PlayerId, PlayersStartingNonceMap),
+    19..|  		     case R of
         |  			 {ok, StartingNonce} -&gt; 
-    17..|  			     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc);
+    18..|  			     collect_transactions_from_player(TxMap, StartingNonce, TransactionListAcc);
         |  			 error -&gt; 
         |  			     %% ignore players not in PlayersStartingNonceMap
         |  
-<font color=red>     0..|  			     TransactionListAcc</font>
+     1..|  			     TransactionListAcc
         |  		     end
         |  	     end,
         |  
         |      % unsorted list of tuples {Counter, Transaction}
-    40..|      TransactionList = maps:fold(FoldFn, [], PlMap),
+    41..|      TransactionList = maps:fold(FoldFn, [], PlMap),
         |  
         |  
-    40..|      TupleCompareFn = fun({Counter1, _}, {Counter2, _}) -&gt; Counter1 =&lt; Counter2 end,
-    40..|      TupleMapFn = fun({_, Transaction}) -&gt; Transaction end,
+    41..|      TupleCompareFn = fun({Counter1, _}, {Counter2, _}) -&gt; Counter1 =&lt; Counter2 end,
+    41..|      TupleMapFn = fun({_, Transaction}) -&gt; Transaction end,
         |  
-    40..|      lists:map(TupleMapFn, lists:sort(TupleCompareFn, TransactionList)).
+    41..|      lists:map(TupleMapFn, lists:sort(TupleCompareFn, TransactionList)).
         |  
         |  %% extracts transactions from a player, in sequential order, starting at Nonce
         |  collect_transactions_from_player(TxMap, Nonce, TransactionListAcc) -&gt;
-    45..|      R = maps:find(Nonce, TxMap),
-    45..|      case R of
+    48..|      R = maps:find(Nonce, TxMap),
+    48..|      case R of
         |  	{ok, TxData} -&gt; 
         |  	    %% insert TxData, increment Nonce
-    28..|  	    collect_transactions_from_player(TxMap, Nonce + 1, [TxData | TransactionListAcc]);
+    30..|  	    collect_transactions_from_player(TxMap, Nonce + 1, [TxData | TransactionListAcc]);
         |  	error -&gt; 
         |  	    %% done
-    17..|  	    TransactionListAcc
+    18..|  	    TransactionListAcc
         |      end.
 </pre>
 </body>

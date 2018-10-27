@@ -152,10 +152,7 @@ make_transaction(PrivateKey, PublicKey, Nonce, ChainId) ->
 	  },
     Hash = my_crypto:hash(my_serializer:serialize_object(T0)),
     Signature = my_crypto:sign(Hash, PrivateKey),
-    CD = maps:get(consensus_data, T0),
-    T1 = T0#{
-	     consensus_data := CD#{signature := Signature}
-	    },
+    T1 = pop_chain:apply_transaction_signature(Signature, T0),
 
     T1.
     
@@ -220,7 +217,7 @@ fancy_test() ->
 
     ?assertEqual(maps:size(PM_BC0#pop_manager.unbound_blocks), 2),
 
-    PM_BCm = pop_manager:on_net_message(self(), Time, send_full_blocks, {old, [C1, C5, C2, C4]}, PM_BC0),
+    PM_BCm = pop_manager:on_net_message(self(), Time, send_full_blocks, {old, [C3, C1, C5, C2, C4]}, PM_BC0),
 
     ?assertEqual(get_hashes([C1, C2, C3, C4, C5]), extract_new_block_messages()),
 
@@ -235,7 +232,7 @@ fancy_test() ->
 
     %% Test send_full_blocks new unknown block
 
-    PM_B_C5 = pop_manager:on_net_message(self(), Time, send_full_blocks, {new, [C5]}, PM_B),
+    PM_B_C5 = pop_manager:on_net_message(self(), Time, send_full_blocks, {new, [C5, C5]}, PM_B),
 
     ?assertEqual(maps:size(PM_B_C5#pop_manager.unbound_blocks), 1),
 
@@ -258,6 +255,9 @@ fancy_test() ->
 
     %% C5 is known
     ReqHashRangeTestFn([C5, C5, B4], PM_BC, [B1, B2, B3, B4]),
+
+    %% C4 is known
+    ReqHashRangeTestFn([C4, C4, B4], PM_BC, [B1, B2, B3, B4]),
     
     %% B4 unknown, A1 is known
     ReqHashRangeTestFn([B4, A1, C2], PM_C, [A2, C1, C2]),
@@ -266,6 +266,8 @@ fancy_test() ->
     ReqHashRangeTestFn([B4, B3, C1], PM_C, [A1, A2, C1]),
 
     %% Test request_full_blocks
+
+    ?assertError(_, pop_manager:on_net_message(self(), Time, request_full_blocks, [B3], PM_B)),
 
     L = [A2, B3, C4, C1],
     HL = get_hashes(L),

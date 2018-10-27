@@ -20,10 +20,7 @@ make_transaction(PrivateKey, PublicKey, Nonce, ChainId) ->
 	  },
     Hash = my_crypto:hash(my_serializer:serialize_object(T0)),
     Signature = my_crypto:sign(Hash, PrivateKey),
-    CD = maps:get(consensus_data, T0),
-    T1 = T0#{
-	     consensus_data := CD#{signature := Signature}
-	    },
+    T1 = pop_chain:apply_transaction_signature(Signature, T0),
 
     T1.
 

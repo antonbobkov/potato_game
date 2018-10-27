@@ -85,5 +85,6 @@ add_transaction_test() ->
 
     ?assertEqual([{0, p2}, {0, p1}, {1, p2}, {2, p2}], get_all_transactions(#{p1 => 0, p2 => 0}, PT1)),
     ?assertEqual([{2, p1}, {1, p2}, {2, p2}, {3, p1}], get_all_transactions(#{p1 => 2, p2 => 1}, PT1)),
+    ?assertEqual([{2, p1}, {3, p1}], get_all_transactions(#{p1 => 2}, PT1)),
 
     ok.
