@@ -15,7 +15,26 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    potatoserver_sup:start_link().
+
+    %%{ok, _} = gen_server:start_link(potato_udp, 3541, []),
+    %%{ok, PotatoGameSup} = supervisor:start_link(potato_game_sup, []),
+    %%{ok, PotatoGameSup}.
+
+
+    {ok, EverythingSup} = potatoserver_sup:start_link(),
+    %% get the potato_game_sup
+    %% I guess you could have also registered it and grabbed it globally :\
+    {ok, PotatoChildSpec} = supervisor:get_childspec(EverythingSup, potato_game_sup),
+    {error,{already_started, PotatoSup}} = supervisor:start_child(EverythingSup, PotatoChildSpec),
+
+    %% TODO create Verifiers
+    Verifiers = [],
+
+    potato_game_sup:add_game(PotatoSup, Verifiers),
+
+    %% TODO other stuff 😱
+
+    {ok, EverythingSup}.
 
 %%--------------------------------------------------------------------
 stop(_State) ->

@@ -1,16 +1,16 @@
 -module(potato_udp).
 -behavior(gen_server).
 
--export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([start_link/1, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 
-start_link() ->
-    gen_server:start_link({local, potato_udp}, potato_udp, [], []).
+start_link(Port) when is_integer(Port) ->
+  gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
 
 %% state maps {game_id} to game PID
 -spec init(integer()) -> {ok, {gen_udp:socket(), map()}}.
 init(Port) ->
-  register(potatoudp, self()),
+  %%register(potato_udp, self()),
   io:format("gen_udp open on port: ~p~n", [Port]),
   {ok, Socket} = gen_udp:open(Port, [binary, {active,true}]),
   %% add to group?
@@ -27,7 +27,7 @@ handle_cast({add_game,Key,Pid}, {Socket, Map}) ->
 
 %% remove game_id from map
 handle_cast({remove_game,Key}, {Socket, Map}) ->
-  Map2 = maps:put(Key, Map),
+  Map2 = maps:remove(Key, Map),
   {noreply, {Socket, Map2}};
 
 %% TODO probably create verifier type that holds address/port
