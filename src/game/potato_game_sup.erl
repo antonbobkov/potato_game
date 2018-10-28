@@ -13,10 +13,12 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
+-spec start_link() -> supervisor:startlink_ret().
 start_link() ->
   %% this will register with name potato_game_sup I think?
   supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
+-spec init(list()) -> {ok,{supervisor:sup_flags(),[supervisor:child_spec()]}} | ignore.
 init([]) ->
   io:format("starting potato_game_sup~n"),
   {ok, {{simple_one_for_one, 1, 5},[
@@ -28,6 +30,8 @@ init([]) ->
     modules => [game]}
   ]}}.
 
+%% @doc add_game adds a new game from a list of Verifiers to the supervisor
+%% TODO proper spc for Verifiers
 -spec add_game(supervisor:sup_ref(), list()) -> pid() | error.
 add_game(SupRef, Verifiers) ->
   case supervisor:start_child(SupRef,[Verifiers]) of

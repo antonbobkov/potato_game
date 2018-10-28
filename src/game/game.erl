@@ -22,7 +22,7 @@ init(Verifiers) ->
 
 
 handle_info(timer_trigger, State) ->
-  io:format("timer triggered~n"),
+  logger:info("timer triggered~n",[]),
   %% do whatever you need to do here
   {noreply, State}.
 

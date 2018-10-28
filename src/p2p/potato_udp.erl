@@ -38,25 +38,27 @@ handle_cast({send, {Address, Port}, Msg}, S) ->
   gen_udp:send(Socket, Address, Port, Msg),
   {noreply, S}.
 
-%% TODO log errors or whatever.
 handle_info({udp, _Socket, _IP, _InPortNo, Packet}, S) ->
   {_, Map} = S,
-  io:format("got: ~p~n", [Packet]),
+  logger:debug("got packet: ~p~n", [Packet]),
   case messages:unpack(Packet) of
     fail ->
-      io:format("received garbage packet ~p~n", [Packet]),
+      logger:alert("received garbage packet ~p~n", [Packet]),
       {noreply, S};
     {GameId, Data} ->
       case maps:find(GameId, Map) of
-        %% maybe remove from set if message could not be passed on (i.e. game died)?
-        {ok, Pid} -> Pid ! Data;
-        error -> ok
+        %% TODO maybe remove from set if message could not be passed on (i.e. game died)?
+        {ok, Pid} ->
+          Pid ! Data;
+        error ->
+          logger:alert("received packet ~p for unknown game id ~p~n",[Packet, GameId]),
+          ok
       end,
       {noreply, S}
   end;
 
 handle_info(E, S) ->
-  io:format("unexpected: ~p~n", [E]),
+  logger:alert("unexpected: ~p~n", [E]),
   {noreply, S}.
 
 
