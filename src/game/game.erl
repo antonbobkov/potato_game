@@ -14,8 +14,11 @@
 start_link(GameInfo) ->
   gen_server:start_link(?MODULE, GameInfo, []).
 
--spec init({[#validator{}], integer()}) -> {ok, #game_state{}}.
-init({Validators, GameId}) ->
+-spec init({KeyPair, GameId, Validators}) -> {ok, #game_state{}} when
+  KeyPair :: {crypto:rsa_public(), crypto:rsa_private()},
+  GameId :: integer(),
+  Validators :: [#validator{}].
+init({_KeyPair, GameId, Validators}) ->
   io:format("starting game with verifiers ~p~n",[Validators]),
   {ok, _TRef} = timer:send_interval(?INTERVAL, timer_trigger),
   GS = #game_state{

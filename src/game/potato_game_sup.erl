@@ -9,7 +9,7 @@
 -module(potato_game_sup).
 -behaviour(supervisor).
 
--export([start_link/0, init/1, add_game/2]).
+-export([start_link/0, init/1, add_game/4]).
 
 -include_lib("stdlib/include/assert.hrl").
 -include("../potato_records.hrl").
@@ -23,19 +23,24 @@ start_link() ->
 init([]) ->
   io:format("starting potato_game_sup~n"),
   {ok, {{simple_one_for_one, 1, 5},[
-  #{id => game,
-    start => {game, start_link, []},
-    restart => transient, %% transient means games that terminate normally will not be restarted
-    shutdown => brutal_kill,
-    type => worker,
-    modules => [game]}
-  ]}}.
+    #{id => game,
+      start => {game, start_link, []},
+      restart => transient, %% transient means games that terminate normally will not be restarted
+      shutdown => brutal_kill,
+      type => worker,
+      modules => [game]}
+    ]}}.
 
 %% @doc add_game adds a new game from a list of Verifiers to the supervisor
 %% TODO proper spec for Verifiers
--spec add_game(supervisor:sup_ref(), [#validator{}]) -> pid() | error.
-add_game(SupRef, Verifiers) ->
-  case supervisor:start_child(SupRef,[Verifiers]) of
+-spec add_game(SupRef, KeyPair, GameId, Validators) -> Pid | error when
+  SupRef :: supervisor:sup_ref(),
+  KeyPair :: {crypto:rsa_public(), crypto:rsa_private()},
+  GameId :: integer(),
+  Validators :: [#validator{}],
+  Pid :: pid().
+add_game(SupRef, KeyPair, Validators, GameId) ->
+  case supervisor:start_child(SupRef,[{KeyPair, GameId, Validators}]) of
     {ok, Child} -> Child;
     {ok, Child, _} -> Child;
     {error, _} -> error

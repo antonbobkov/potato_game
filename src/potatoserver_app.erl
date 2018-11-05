@@ -10,6 +10,8 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 
+-include("./potato_records.hrl").
+
 %%====================================================================
 %% API
 %%====================================================================
@@ -31,10 +33,19 @@ start(_StartType, _StartArgs) ->
   {ok, PotatoChildSpec} = supervisor:get_childspec(EverythingSup, potato_game_sup),
   {error,{already_started, PotatoSup}} = supervisor:start_child(EverythingSup, PotatoChildSpec),
 
-  %% TODO create Verifiers
-  Verifiers = [],
+  {Key1, _} = my_crypto:potato_key(),
+  {Key2, _} = my_crypto:potato_key(),
+  Validators = [
+    #validator{
+      pubkey = Key1,
+      address = {"localhost", 9000}
+    },
+    #validator{
+      pubkey = Key2,
+      address = {"localhost", 9000}
+    }],
 
-  potato_game_sup:add_game(PotatoSup, Verifiers),
+  potato_game_sup:add_game(PotatoSup, my_crypto:potato_key(), 1234, Validators),
 
   %% TODO other stuff 😱
 
