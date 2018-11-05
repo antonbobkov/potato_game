@@ -12,6 +12,7 @@
 -export([start_link/0, init/1, add_game/2]).
 
 -include_lib("stdlib/include/assert.hrl").
+-include("../potato_records.hrl").
 
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->
@@ -31,8 +32,8 @@ init([]) ->
   ]}}.
 
 %% @doc add_game adds a new game from a list of Verifiers to the supervisor
-%% TODO proper spc for Verifiers
--spec add_game(supervisor:sup_ref(), list()) -> pid() | error.
+%% TODO proper spec for Verifiers
+-spec add_game(supervisor:sup_ref(), [#validator{}]) -> pid() | error.
 add_game(SupRef, Verifiers) ->
   case supervisor:start_child(SupRef,[Verifiers]) of
     {ok, Child} -> Child;

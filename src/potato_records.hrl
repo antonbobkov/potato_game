@@ -10,10 +10,13 @@
 -record(pop_manager, {unbound_blocks, pop_chain, config}).
 
 -record(validator,
-  {gameid :: integer(),
-  pubkey :: public_key:public_key(),
+  {pubkey :: public_key:public_key(),
   address :: {string(), integer()}}).
 
+-record(game_state,
+  {gameid :: integer(),
+  validators :: [#validator{}],
+  otherstuff :: term()}).
 
 
 %% These are handled by maps rather than records
