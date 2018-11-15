@@ -1,13 +1,9 @@
-potatoserver
-=====
-
-An OTP application
 
 [![Build Status](https://travis-ci.org/antonbobkov/potato_game.svg?branch=master)](https://travis-ci.org/antonbobkov/potato_game)
 
-Build
------
+# Potato Game
 
-    $ rebar3 compile
-    $ rebar3 eunit
-    $ rebar3 shell
+Potato game is a proof-of-concept custom blockchain implementation.
+The current design allows a small pool of verifiers maintain a blockchain that keep track of a video game server state.
+Players can join the game and submit transactions.
+The game state cannot be subverted unless the majority of verifiers in the pool are malicious.
