@@ -2,7 +2,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--export([hash/1, sign/2, verify/3, read_file_key/2]).
+-export([hash/1, sign/2, verify/3, read_file_key/2, potato_key/0]).
 
 -define(MY_CRYPTO_DEBUG, true).
 
@@ -20,16 +20,20 @@ read_file_key_full(private, FileName) ->
     Key = public_key:pem_entry_decode(RSAEntry),
     Key;
 
-    
+
 read_file_key_full(public, FileName) ->
     {ok, Bin} = file:read_file(FileName),
     [{Key, _}] = public_key:ssh_decode(Bin, public_key),
     Key.
 
+-spec potato_key() -> {crypto:rsa_public(), crypto:rsa_private()}.
+potato_key() ->
+  crypto:generate_key(rsa, {8, 65537}).
+
 %% Debugging simplified functions
 
 %% cut hash down to three bytes
-hash_debug(Bin) -> 
+hash_debug(Bin) ->
     Full = crypto:hash(sha256, Bin),
     Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
 
@@ -108,5 +112,3 @@ my_crypto_test_gen(HashFn, SignFn, VerifyFn, ReadFn) ->
     %% io:format("signature ~p verify ~p ~n", [Signature, VerifyResult]),
     %% [Key, PubKey].
     ok.
-
-
