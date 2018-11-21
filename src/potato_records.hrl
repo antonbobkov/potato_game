@@ -9,6 +9,9 @@
 -record(pop_manager_config, {request_range_backup, net_send, on_new_block}).
 -record(pop_manager, {unbound_blocks, pop_chain, config}).
 
+-record(pop_verifier_config, {sub_time_out, my_index, my_key}).
+-record(pop_verifier, {config, verifiers_arr, subscribers, pop_manager}).
+
 %% These are handled by maps rather than records
 -define(block, [previous_id, this_id, height, transactions, consensus_data]).
 -define(consensus_block_data, [signature, verifier_pub_key, verifier_index, timestamp]).
