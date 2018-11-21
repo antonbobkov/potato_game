@@ -1,3 +1,5 @@
+%% @doc code that handles running a full verifier node.
+
 -module(pop_verifier).
 
 -export([
@@ -12,6 +14,11 @@
 
 -include("potato_records.hrl").
 
+
+%% @doc Create new verifier. 
+%% 
+%% Needs to hook up PopManagerConfig.on_new_block to pop_verifier:on_new_block
+
 new(PopConfigData, PopManagerConfig, PopVerConfig) ->
     #pop_verifier{
        subscribers = maps:new(),
@@ -19,6 +26,12 @@ new(PopConfigData, PopManagerConfig, PopVerConfig) ->
        config = PopVerConfig,
        verifiers_arr = PopConfigData#pop_config_data.verifiers_arr
       }.
+
+%% @doc Adds/updates a subscriber.
+%% 
+%% Subscribers are sent updates on when new blocks are added.
+%% Each sub expired after a fixed time, to stay subscribed this message needs to be spammed periodically.
+%% (Similar to ping)
 
 on_net_message(SenderAddress, CurrentTime, subscribe, no_data, PopVerifier) ->
     Subs = PopVerifier#pop_verifier.subscribers,
@@ -51,6 +64,8 @@ emit_net_message_to_list(AddressList, MsdId, Data, PopVerifier) ->
     
     ok.
 
+%% @doc Process time related events: subscriber clean up and block generation
+
 on_timer(CurrentTime, PV0) ->
     PV1 = subscriber_clean_up(CurrentTime, PV0),
 
@@ -75,6 +90,7 @@ on_timer(CurrentTime, PV0) ->
     
     PV1.
 
+%% @doc Sends new block info to subscribers
 on_new_block(NewBlock, PopVerifier) ->
     emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier),
     PopVerifier.
