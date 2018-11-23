@@ -2,9 +2,20 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--export([hash/1, sign/2, verify/3, read_file_key/2, potato_key/0]).
+-export([hash/1, sign/2, verify/3, read_file_key/2, potato_key/0, is_public_key/1]).
 
 -define(MY_CRYPTO_DEBUG, true).
+
+-type public_key() :: crypto:rsa_public().
+-type private_key() :: crypto:rsa_private().
+-type key_pair() :: {public_key(), private_key()}.
+
+-spec is_public_key(any()) -> boolean().
+is_public_key(Key) ->
+  case Key of
+    [_E, _N] -> true; %% TODO do validation
+    _ -> false
+  end.
 
 %% Actual function implementations
 
@@ -26,9 +37,9 @@ read_file_key_full(public, FileName) ->
     [{Key, _}] = public_key:ssh_decode(Bin, public_key),
     Key.
 
--spec potato_key() -> {crypto:rsa_public(), crypto:rsa_private()}.
+-spec potato_key() -> key_pair().
 potato_key() ->
-  crypto:generate_key(rsa, {8, 65537}).
+  crypto:generate_key(rsa, {23434, 65537}).
 
 %% Debugging simplified functions
 

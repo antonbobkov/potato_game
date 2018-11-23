@@ -36,13 +36,15 @@ start(_StartType, _StartArgs) ->
   {Key1, _} = my_crypto:potato_key(),
   {Key2, _} = my_crypto:potato_key(),
   Validators = [
-    #validator{
-      pubkey = Key1,
-      address = {"localhost", 9000}
+    #verifier_public_info{
+      index = 0,
+      public_key = Key1,
+      network_data = {"localhost", 9000}
     },
-    #validator{
-      pubkey = Key2,
-      address = {"localhost", 9000}
+    #verifier_public_info{
+      index = 0,
+      public_key = Key2,
+      network_data = {"localhost", 9000}
     }],
 
   potato_game_sup:add_game(PotatoSup, my_crypto:potato_key(), 1234, Validators),

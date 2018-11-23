@@ -17,7 +17,7 @@ start_link(GameInfo) ->
 -spec init({KeyPair, GameId, Validators}) -> {ok, #game_state{}} when
   KeyPair :: {crypto:rsa_public(), crypto:rsa_private()},
   GameId :: integer(),
-  Validators :: [#validator{}].
+  Validators :: [#verifier_public_info{}].
 init({_KeyPair, GameId, Validators}) ->
   io:format("starting game with verifiers ~p~n",[Validators]),
   {ok, _TRef} = timer:send_interval(?INTERVAL, timer_trigger),

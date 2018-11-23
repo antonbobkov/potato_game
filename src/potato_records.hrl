@@ -1,7 +1,11 @@
 -record(tree_data, {pending_transactions, block_map}).
 -record(pending_tx, {player_map, counter}).
 
--record(verifier_public_info, {index, public_key, network_data}).
+-record(verifier_public_info,
+  {index :: integer(),
+  public_key :: public_key:public_key(),
+  network_data :: term()}).
+
 -record(pop_config_data, {time_between_blocks, time_desync_margin, chain_id, verifiers_arr, init_time}).
 
 -record(pop_chain, {pop_config_data, tree_data, head_block, genisys_block}).
@@ -12,13 +16,9 @@
 -record(pop_verifier_config, {sub_time_out, my_index, my_key}).
 -record(pop_verifier, {config, verifiers_arr, subscribers, pop_manager}).
 
--record(validator,
-  {pubkey :: public_key:public_key(),
-  address :: {string(), integer()}}).
-
 -record(game_state,
   {gameid :: integer(),
-  validators :: [#validator{}],
+  validators :: [#verifier_public_info{}],
   otherstuff :: term()}).
 
 %% These are handled by maps rather than records

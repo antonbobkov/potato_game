@@ -6,9 +6,9 @@
 potato_udp_test() ->
   Port = 3142,
   {ok, Pid} = gen_server:start(potato_udp, Port, []),
-  %% ?debugFmt("started potato_udp gen_server ~p~n",[Pid]),
+  %%?debugFmt("started potato_udp gen_server ~p~n",[Pid]),
   %% send a valid message
-  gen_server:cast(Pid, {send, {"localhost", Port}, messages:pack_unsigned(0,"hi")}),
+  gen_server:cast(Pid, {send, {"localhost", Port}, typetato:pack_unsigned({game_id, 0},"hi")}),
   %% send an invalid message
   gen_server:cast(Pid, {send, {"localhost", Port}, "hi"}),
   ok = gen_server:stop(Pid).

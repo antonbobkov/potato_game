@@ -37,7 +37,7 @@ init([]) ->
   SupRef :: supervisor:sup_ref(),
   KeyPair :: {crypto:rsa_public(), crypto:rsa_private()},
   GameId :: integer(),
-  Validators :: [#validator{}],
+  Validators :: [#verifier_public_info{}],
   Pid :: pid().
 add_game(SupRef, KeyPair, Validators, GameId) ->
   case supervisor:start_child(SupRef,[{KeyPair, GameId, Validators}]) of

@@ -46,7 +46,7 @@ init(Port) ->
       start => {potato_game_sup, start_link, []},
       restart => permanent,
       shutdown => brutal_kill,
-      type => worker,
+      type => supervisor,
       modules => [potato_game_sup]}
 
     %% TODO start the web3 supervisor, it will create new games inside of the game supervisor
