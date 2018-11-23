@@ -82,5 +82,8 @@ pid_tracker_loop(PidMap, ReportPid) ->
 
 	{get_map, Pid} ->
 	    Pid ! {map, PidMap},
-	    pid_tracker_loop(PidMap, ReportPid)
+	    pid_tracker_loop(PidMap, ReportPid);
+
+	_Any ->
+	    erlang:error({"unexpected message", _Any})
     end.

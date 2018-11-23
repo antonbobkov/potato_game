@@ -232,11 +232,11 @@ fancy_test() ->
 
     %% Test send_full_blocks new unknown block
 
-    PM_B_C5 = pop_manager:on_net_message(self(), Time, send_full_blocks, {new, [C5, C5]}, PM_B),
+    PM_B_C5 = pop_manager:on_net_message(self(), Time, send_full_blocks, {new, [B1, C5]}, PM_B),
 
     ?assertEqual(maps:size(PM_B_C5#pop_manager.unbound_blocks), 1),
 
-    ?assertEqual({net, request_block_hash_range, get_hashes_tuple([B4, B1, C5])}, extract_message()),
+    ?assertEqual({net, request_block_hash_range, get_hashes_tuple([B4, B1, C4])}, extract_message()),
 
     ?assert(no_more_messages()),
 

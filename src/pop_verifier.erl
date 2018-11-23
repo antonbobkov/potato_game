@@ -6,7 +6,8 @@
 	 new/3,
 	 on_net_message/5,
 	 on_timer/2,
-	 on_new_block/2
+	 on_new_block/2,
+	 start_loop/5
 	]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -33,10 +34,18 @@ new(PopConfigData, PopManagerConfig, PopVerConfig) ->
 %% Each sub expired after a fixed time, to stay subscribed this message needs to be spammed periodically.
 %% (Similar to ping)
 
-on_net_message(SenderAddress, CurrentTime, subscribe, no_data, PopVerifier) ->
+on_net_message(SenderAddress, CurrentTime, subscribe, _, PopVerifier) ->
     Subs = PopVerifier#pop_verifier.subscribers,
 
-    PopVerifier#pop_verifier{subscribers = maps:put(SenderAddress, CurrentTime, Subs)}.
+    PopVerifier#pop_verifier{subscribers = maps:put(SenderAddress, CurrentTime, Subs)};
+
+on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopVerifier) ->
+    PM0 = PopVerifier#pop_verifier.pop_manager,
+
+    PM1 = pop_manager:on_net_message(SenderAddress, CurrentTime, MsgId, Data, PM0),
+    
+    PopVerifier#pop_verifier{pop_manager = PM1}.
+
 
 subscriber_clean_up(CurrentTime, PopVerifier) ->
     Timeout = PopVerifier#pop_verifier.config#pop_verifier_config.sub_time_out,
@@ -55,7 +64,7 @@ emit_net_message(verifiers, MsdId, Data, PopVerifier) ->
     emit_net_message_to_list(array:to_list(VerifiersAddressArr), MsdId, Data, PopVerifier);
 
 emit_net_message(subs, MsdId, Data, PopVerifier) ->
-    emit_net_message_to_list(PopVerifier#pop_verifier.subscribers, MsdId, Data, PopVerifier).
+    emit_net_message_to_list(maps:keys(PopVerifier#pop_verifier.subscribers), MsdId, Data, PopVerifier).
 
 emit_net_message_to_list(AddressList, MsdId, Data, PopVerifier) ->
     NetSendFn = PopVerifier#pop_verifier.pop_manager#pop_manager.config#pop_manager_config.net_send,
@@ -81,7 +90,7 @@ on_timer(CurrentTime, PV0) ->
 
 	    NewBlock = pop_chain:apply_block_signature(my_crypto:sign(maps:get(this_id, NewBlockUnsigned), PrivateKey), NewBlockUnsigned),
 
-	    emit_net_message(verifiers, send_full_blocks, {new, NewBlock}, PV1),
+	    emit_net_message(verifiers, send_full_blocks, {new, [NewBlock]}, PV1),
 
 	    ok;
 
@@ -94,9 +103,52 @@ on_timer(CurrentTime, PV0) ->
 on_new_block(NewBlock, PopVerifier) ->
     emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier),
     PopVerifier.
-   
+
+%% @doc starts loop handling the verifier
+
+start_loop(PopConfigData, PopManagerConfig, PopVerConfig, TimerIntervalSec, OnExitFn) ->
+
+    if TimerIntervalSec /= no_timer ->
+	    TimerRef = timer:send_interval(TimerIntervalSec * 1000, timer_real),
+	    Data = {TimerRef, OnExitFn};
+       true ->
+	    Data = {no_timer, OnExitFn}
+    end,
+
+    OnNewBlockFn = fun(Block) -> self() ! {new_block, Block} end,
+
+    PopVerifier = new(PopConfigData, PopManagerConfig#pop_manager_config{on_new_block = OnNewBlockFn}, PopVerConfig),
+
+    loop(PopVerifier, Data).
+
+loop(State, Data = {TimerRef, OnExitFn}) ->
+    %% ?debugHere,
+    %% ?debugFmt("verifier loop ~p~n", [self()]),
+    receive 
+ 	{net, SenderAddress, CurrentTime, MsgId, NetData} ->
+	    NewState = on_net_message(SenderAddress, CurrentTime, MsgId, NetData, State);
+	{timer_custom, CurrentTime} ->
+	    NewState = on_timer(CurrentTime, State);
+	timer_real ->
+	    CurrentTime = erlang:system_time(second),
+	    NewState = on_timer(CurrentTime, State);
+	{new_block, Block} ->
+	    NewState = on_new_block(Block, State);
+	exit ->
+	    if TimerRef /= no_timer ->
+		    {ok, cancel} = timer:cancel(TimerRef);
+	       true -> ok
+	    end,
+	    NewState = exit;
+	Any ->
+	    NewState = erlang:error({"unexpected message", Any})
+    end,
     
-		       
-		        
-
-
+    if NewState /= exit ->
+	    loop(NewState, Data);
+       true -> 
+	    %% ?debugFmt("exit verifier loop ~p~n", [self()]),
+	    OnExitFn(),
+	    ok
+    end.
+	    
