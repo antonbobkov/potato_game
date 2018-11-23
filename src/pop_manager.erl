@@ -75,14 +75,14 @@ get_nth_prev_block(N, Block, PC) ->
 	    get_nth_prev_block(N-1, get_prev(Block, PC), PC)
     end.
 
-setup_range_request(UnknownBlock, PopManager) ->
+setup_range_request(LastUnknownBlockHash, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
     N = PopManager#pop_manager.config#pop_manager_config.request_range_backup,
 
     KnownBlock1 = pop_chain:get_head_block(PC),
     KnownBlock2 = get_nth_prev_block(N, KnownBlock1, PC),
     
-    {maps:get(this_id, KnownBlock1), maps:get(this_id, KnownBlock2), maps:get(this_id, UnknownBlock)}.
+    {maps:get(this_id, KnownBlock1), maps:get(this_id, KnownBlock2), LastUnknownBlockHash}.
 
 %% given unknown block request, and longest known block from another party
 %% make a best guess about which blocks are unknown to the other party
@@ -229,11 +229,12 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 
     FoldFn = 
 	fun(Block, PM) ->
-		Hash = maps:get(this_id, Block),
-		BlockStatus = get_block_status(Hash, PM),
+		PrevHash = maps:get(previous_id, Block),
 
-		if (Age == new) and (BlockStatus == unknown) ->
-			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(Block, PM));
+		PrevBlockStatus = get_block_status(PrevHash, PM),
+
+		if (Age == new) and (PrevBlockStatus /= in_chain) ->
+			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(PrevHash, PM));
 		   true -> ok
 		end,
 		
