@@ -32,7 +32,6 @@ start_link() ->
 %% Before OTP 18 tuples must be used to specify a child. e.g.
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init(Port) ->
-  %% TODO game sup
   {ok, {{rest_for_one, 1, 5},[
     %% start potato_udp, it will register itself under potato_udp (access via whereis(potatoudp))
     #{id => potato_udp,

@@ -25,14 +25,15 @@ start(_StartType, _StartArgs) ->
   %%{ok, PotatoGameSup} = supervisor:start_link(potato_game_sup, []),
   %%{ok, PotatoGameSup}.
 
-
-
+  %% start the supervisor
   {ok, EverythingSup} = potatoserver_sup:start_link(),
-  %% get the potato_game_sup
+
+  %% get the potato_game_sup from the supervisor started abev
   %% I guess you could have also registered it and grabbed it globally :\
   {ok, PotatoChildSpec} = supervisor:get_childspec(EverythingSup, potato_game_sup),
   {error,{already_started, PotatoSup}} = supervisor:start_child(EverythingSup, PotatoChildSpec),
 
+  %% create test verifiers
   {Key1, _} = my_crypto:potato_key(),
   {Key2, _} = my_crypto:potato_key(),
   Validators = [
@@ -47,6 +48,7 @@ start(_StartType, _StartArgs) ->
       network_data = {"localhost", 9000}
     }],
 
+  %% add a game 
   potato_game_sup:add_game(PotatoSup, my_crypto:potato_key(), 1234, Validators),
 
   %% TODO other stuff 😱

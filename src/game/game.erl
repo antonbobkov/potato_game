@@ -36,7 +36,7 @@ handle_info(timer_trigger, State) ->
 
 %% TODO
 handle_cast(_E, State) ->
-  {noreply,State}.
+  {noreply, State}.
 
 %% TODO
 handle_call(_E, _From, S) ->

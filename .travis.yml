@@ -3,5 +3,4 @@ matrix:
   include:
     - os: linux
       otp_release: 21.0
-
-      
+script: rebar3 eunit && rebar3 dialyzer

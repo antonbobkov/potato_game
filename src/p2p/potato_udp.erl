@@ -7,6 +7,8 @@
 -type udp_port() :: integer().
 -type udp_address() :: {udp_ip(), udp_port()}.
 
+-type state() :: {gen_udp:socket(), map()}.
+
 %% game map maps game id to list of game instances
 -type game_map() :: map().
 
@@ -26,20 +28,23 @@ init(Port) ->
 handle_call(_E, _From, S) ->
   {noreply, S}.
 
+-spec handle_cast(Arg, state()) -> {noreply, state()} when
+  Arg :: {add_game, {typetato:game_id(), typetato:verifier_id()}, pid()}
+    | {remove_game, {typetato:game_id(), typetato:verifier_id()}}
+    | {send, udp_address(), binary()}.
 %% add a {game_id, VerifierId} => Pid to map
 handle_cast({add_game,{Key, VerId},Pid}, {Socket, Map}) ->
   VerList = maps:get(Key, Map, []),
   Map2 = maps:put(Key, [{VerId, Pid} | VerList], Map),
   {noreply, {Socket, Map2}};
-
-%% remove game_id from map
-handle_cast({remove_game,Key}, {Socket, Map}) ->
-  Map2 = maps:remove(Key, Map),
+%% remove {game_id, VerifierId} from map
+handle_cast({remove_game,{Key, VerId}}, {Socket, Map}) ->
+  VerList = maps:get(Key, Map, []),
+  VerList2 = lists:filter(fun({Id, _}) -> Id == VerId end, VerList),
+  Map2 = maps:put(Key, VerList2, Map),
   {noreply, {Socket, Map2}};
 
-%% TODO probably create verifier type that holds address/port
-%% consider adding {validator -> address} mapping as well
-%% and then this function will handle formatting the message
+%% send a message to a remote host
 handle_cast({send, {Address, Port}, Msg}, S) ->
   {Socket, _} = S,
   gen_udp:send(Socket, Address, Port, Msg),
