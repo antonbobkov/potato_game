@@ -24,7 +24,8 @@
 %% -type txarray() :: array:array(tx()).
 -type txlist() :: [tx()].
 -type playertxmap() :: map().
--type addresult() :: ignore_duplicate | added | ignore_nonce_too_high.
+-type addresult() :: ignored_duplicate | updated_old | added_new.
+%% -type addresult() :: any().
 -type treedata() :: #tree_data{}.
 -type playerid() :: integer().
 -type nonce() :: integer().

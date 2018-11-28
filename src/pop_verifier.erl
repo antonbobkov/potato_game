@@ -109,7 +109,7 @@ on_new_block(NewBlock, PopVerifier) ->
 start_loop(PopConfigData, PopManagerConfig, PopVerConfig, TimerIntervalSec, OnExitFn) ->
 
     if TimerIntervalSec /= no_timer ->
-	    TimerRef = timer:send_interval(TimerIntervalSec * 1000, timer_real),
+	    {ok, TimerRef} = timer:send_interval(TimerIntervalSec * 1000, timer_real),
 	    Data = {TimerRef, OnExitFn};
        true ->
 	    Data = {no_timer, OnExitFn}
