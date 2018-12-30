@@ -21,7 +21,9 @@
 	{
 	 process_map = maps:new(),  % name -> pid map
 	 msg_buffer = [],	    % message buffer
-	 size_hook = none
+	 size_hook = none,
+	 disconnect_set = sets:new(), % {name, name}
+	 last_time_tick = none
 	}).
 
 
@@ -40,12 +42,55 @@ start(_TrackerFn = {OnStartFn, OnExitFn}) ->
 start() -> start({fun(_) -> ok end, fun() -> ok end}).
 
 
+release_buffered_messages(MsgHandler) ->
+    MP = MsgHandler#message_handler.process_map,
+    MB = MsgHandler#message_handler.msg_buffer,
+    %% Hook = MsgHandler#message_handler.size_hook,
+    DisST = MsgHandler#message_handler.disconnect_set,
+    LastTimeTick = MsgHandler#message_handler.last_time_tick,
+
+    ?assertNotEqual(none, LastTimeTick),
+
+    MsgFn = fun({FromAddress, DestAddress, MsgId, MsgData}) -> 
+		    IsDisconntected = sets:is_element({FromAddress, DestAddress}, DisST),
+
+		    if IsDisconntected == false ->
+			    Pid = maps:get(DestAddress, MP),
+			    Pid ! {net, FromAddress, LastTimeTick, MsgId, MsgData};
+		       true ->
+			    ok
+		    end
+	    end, 
+
+    lists:foreach(MsgFn, lists:reverse(MB)),
+
+    NewMsgHandler = MsgHandler#message_handler{msg_buffer = [], size_hook = none},
+    NewMsgHandler.
+    
+check_hook(MsgHandler) ->
+    MB = MsgHandler#message_handler.msg_buffer,
+    Hook = MsgHandler#message_handler.size_hook,
+    
+    Sz = length(MB),
+    case Hook of 
+	{L, Pid} when L =< Sz ->
+	    Pid ! {msg_buffer, MB},
+	    NewMsgHandler = release_buffered_messages(MsgHandler),
+
+	    NewMsgHandler;
+
+	_Else ->
+	    MsgHandler
+    end.
+
+
 %% main loop
 
 message_handler_loop(MsgHandler, Data = {OnExitFn}) ->
     MP = MsgHandler#message_handler.process_map,
     MB = MsgHandler#message_handler.msg_buffer,
     Hook = MsgHandler#message_handler.size_hook,
+    DisST = MsgHandler#message_handler.disconnect_set,
 
     receive
 	%% register name
@@ -53,21 +98,25 @@ message_handler_loop(MsgHandler, Data = {OnExitFn}) ->
 	    ?assertEqual(maps:find(Key, MP), error),
 	    NewMsgHandler = MsgHandler#message_handler{process_map = maps:put(Key, Pid, MP)};
 
-	%% release buffered messages
-	{send_buffered_messages, CurrentTime} ->
-	    MsgFn = fun({FromAddress, DestAddress, MsgId, MsgData}) -> 
-			    Pid = maps:get(DestAddress, MP),
-			    Pid ! {net, FromAddress, CurrentTime, MsgId, MsgData}
-		    end, 
+	%% add disconnect
+	{add_disconnect, NameFrom, NameTo} ->
+	    NewMsgHandler = MsgHandler#message_handler{disconnect_set = sets:add_element({NameFrom, NameTo}, DisST)};
 
-	    lists:foreach(MsgFn, lists:reverse(MB)),
-	    
-	    NewMsgHandler = MsgHandler#message_handler{msg_buffer = []};
+	%% remove all disconnects
+	{remove_disconnects} ->
+	    NewMsgHandler = MsgHandler#message_handler{disconnect_set = sets:new()};
+
+	%% release buffered messages
+	{process_buffered_messages_no_reply, Time} ->
+	    NewMsgHandler = release_buffered_messages(MsgHandler#message_handler{last_time_tick = Time});
+
+	{process_buffered_messages_no_reply} ->
+	    NewMsgHandler = release_buffered_messages(MsgHandler);
 
 	%% get currently buffered messages
-	{get_all_messages, Pid} ->
+	{process_buffered_messages, Pid} ->
 	    Pid ! {msg_buffer, MB},
-	    NewMsgHandler = MsgHandler;
+	    NewMsgHandler = release_buffered_messages(MsgHandler);
 
 	%% Send message to name. Gets buffered.
 	{net, NetData} ->
@@ -76,21 +125,12 @@ message_handler_loop(MsgHandler, Data = {OnExitFn}) ->
 	    ?assertMatch({ok, _}, maps:find(FromAddress, MP)),
 	    ?assertMatch({ok, _}, maps:find(DestAddress, MP)),
 
-	    NewMB = [NetData | MB],
-	    Sz = length(NewMB),
 
-	    case Hook of 
-		{L, Pid} when L =< Sz ->
-		    Pid ! {msg_buffer, NewMB},
-		    NewMsgHandler = MsgHandler#message_handler{msg_buffer = NewMB, size_hook = none};
-
-		_Else ->
-		    NewMsgHandler = MsgHandler#message_handler{msg_buffer = NewMB}
-	    end;
+	    NewMsgHandler = check_hook(MsgHandler#message_handler{msg_buffer = [NetData | MB] });
 
 	{set_hook, Size, Pid} ->
 	    ?assertEqual(none, Hook),
-	    NewMsgHandler = MsgHandler#message_handler{size_hook = {Size, Pid}};
+	    NewMsgHandler = check_hook(MsgHandler#message_handler{size_hook = {Size, Pid}});
 
 	%% send timer message
 	{timer_tick, CurrentTime} ->
@@ -101,7 +141,7 @@ message_handler_loop(MsgHandler, Data = {OnExitFn}) ->
 
 	    lists:foreach(MsgFn, maps:values(MP)),
 	    
-	    NewMsgHandler = MsgHandler;
+	    NewMsgHandler = MsgHandler#message_handler{last_time_tick = CurrentTime};
 	exit ->
 	    lists:foreach( fun(Pid) -> Pid ! exit end, maps:values(MP)),
 	    NewMsgHandler = exit;

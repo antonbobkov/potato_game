@@ -1,0 +1,3 @@
+#/bin/bash
+
+rebar3 eunit -mpop_verifier_test
