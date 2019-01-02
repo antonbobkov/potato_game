@@ -7,7 +7,7 @@
 -type udp_port() :: integer().
 -type udp_address() :: {udp_ip(), udp_port()}.
 -type node_id() :: any().
--type node_address() :: {udp_address(), node_id()}.
+-type node_address() :: {udp_address(), node_id() | [node_id()]}.
 
 %% maps node_id to Pid of the process
 -type node_map() :: map().
@@ -16,32 +16,32 @@
 
 
 start_link(Port) ->
-  gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
+    gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
 
 -spec init(udp_port()) -> {ok, state()}.
 
 init(Port) ->
-  %%register(potato_udp, self()),
+    %%register(potato_udp, self()),
 
-  {ok, Socket} = gen_udp:open(Port, [binary, {active,true}]),
-  %% io:format("gen_udp open on port: ~p~n", [Port]),
+    {ok, Socket} = gen_udp:open(Port, [binary, {active,true}]),
+    %% io:format("gen_udp open on port: ~p~n", [Port]),
 
-  {ok, {Socket, maps:new()}}.
+    {ok, {Socket, maps:new()}}.
 
 %% Never used
 handle_call(E, From, S) ->
-  erlang:error(unexptected_handle_call, [E, From, S]).
+    erlang:error(unexptected_handle_call, [E, From, S]).
 
 -spec handle_cast(Arg, state()) -> {noreply, state()} when
-  Arg :: {add_node, node_id(), pid()}
-       %% | {remove_node, {typetato:node_id(), typetato:verifier_id()}}
-       | {send, node_address(), any()}
-       | {send, [node_address()], any()}.
+      Arg :: {add_node, node_id(), pid()}
+	     %% | {remove_node, {typetato:node_id(), typetato:verifier_id()}}
+	   | {send, node_address(), any()}
+	   | {send, [node_address()], any()}.
 
 %% add a node_id => Pid to map
 handle_cast({add_node, NodeId, Pid}, {Socket, NodeMap}) ->
-  NodeMap2 = maps:put(NodeId, Pid, NodeMap),
-  {noreply, {Socket, NodeMap2}};
+    NodeMap2 = maps:put(NodeId, Pid, NodeMap),
+    {noreply, {Socket, NodeMap2}};
 
 %% remove {node_id, VerifierId} from map
 %% handle_cast({remove_node,{Key, VerId}}, {Socket, Map}) ->
@@ -50,58 +50,85 @@ handle_cast({add_node, NodeId, Pid}, {Socket, NodeMap}) ->
 %%   Map2 = maps:put(Key, VerList2, Map),
 %%   {noreply, {Socket, Map2}};
 
-%% send a message to a remote host
-handle_cast({send, {Address, Port}, Msg}, S) ->
-  {Socket, _} = S,
-  gen_udp:send(Socket, Address, Port, Msg),
-  {noreply, S}.
+handle_cast({send, NodeAddressList, Msg}, S) when is_list(NodeAddressList) ->
 
+    OptimizedNodeAddressList = optimize_routing(NodeAddressList),
+    lists:foreach(fun(NodeAddress) -> handle_cast({send, NodeAddress, Msg}, S) end, OptimizedNodeAddressList),
+
+    {noreply, S};
+
+%% send a message to a remote host (possibly to multiple nodes)
+
+handle_cast({send, NodeAddress, Msg}, S) ->
+
+    {{IpAddress, Port}, RemoteNodeList} = NodeAddress,
+    {Socket, _} = S,
+
+    gen_udp:send(Socket, IpAddress, Port, term_to_binary({RemoteNodeList, Msg})),
+
+    {noreply, S}.
+
+
+
+%% group messages by network address (so we don't duplicate messages to the same address)
+
+-spec optimize_routing([node_address()]) -> [node_address()].
+
+optimize_routing(NodeAddressList) when is_list(NodeAddressList) ->
+    append_fn = fun({NetAddress, NodeIdMaybeList}, MapIn) ->
+
+			if is_list(NodeIdMaybeList) ->
+				NodeIdList = NodeIdMaybeList;
+			   true ->
+				NodeIdList = [NodeIdMaybeList]
+			end,
+			
+			maps:put(NetAddress, NodeIdList ++ maps:get(NetAddress, MapIn, []), MapIn)
+		end,
+
+    MessageMap = lists:foldl(append_fn, maps:new(), NodeAddressList),
+
+    maps:to_list(MessageMap).
+    
 %% unknown_node_error(Packet, NodeId) ->
 %%   %% TODO maybe remove from set if message could not be passed on (i.e. node died)?
 %%   logger:alert("received packet ~p for unknown node id ~p~n",[Packet, NodeId]),
 %%   ok.
 
-handle_info({udp, _Socket, _IP, _InPortNo, Packet}, S) ->
-  {_, Map} = S,
-  logger:debug("got packet: ~p~n", [Packet]),
-  case typetato:unpack(Packet) of
-    fail ->
-      logger:alert("received garbage packet ~p~n", [Packet]),
-      {noreply, S};
-    {ok, {NetId, Data}} ->
-      case NetId of
-        {node_id, NodeId} ->
-          case maps:find(NodeId, Map) of
-            {ok, VerList} ->
-              lists:foreach(fun({_, Pid}) -> Pid ! Data end, VerList);
-            error ->
-              unknown_node_error(Packet, NodeId)
-          end;
-        {targeted, {NodeId, VerifierId}} ->
-          case maps:find(NodeId, Map) of
-            {ok, VerList} ->
-              case lists:search(fun({VerId, _}) -> VerId == VerifierId end, VerList) of
-                {value, {_, Pid}} ->
-                  Pid ! Data;
-                false ->
-                  %% TODO log verified id as well
-                  unknown_node_error(Packet, NodeId)
-              end;
-            error ->
-              unknown_node_error(Packet, NodeId)
-          end
-      end,
-      {noreply, S}
-  end;
+handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
+    {_, NodeMap} = S,
+
+    %% logger:debug("got packet: ~p~n", [Packet]),
+
+    {ok, {NodeMaybeList, Msg}} = binary_to_term(Packet),
+
+	    
+    if is_list(NodeMaybeList) ->
+	    NodeList = NodeMaybeList;
+       true ->
+	    NodeList = [NodeMaybeList]
+    end,
+
+    forward_fn = fun(NodeId) ->
+			 Pid = maps:get(NodeId, NodeMap),
+			 Pid ! {net, Msg}
+		 end,
+
+    lists:foreach(forward_fn, NodeList),
+
+    {noreply, S};
 
 handle_info(E, S) ->
-  logger:alert("unexpected: ~p~n", [E]),
-  {noreply, S}.
+    %% logger:alert("unexpected: ~p~n", [E]),
+    erlang:error(unexpected_handle_info, [E, S]).
+    %% {noreply, S}.
 
 
-code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
+code_change(OldVsn, State, Extra) ->
+    erlang:error(unexpected_code_change, [OldVsn, State, Extra]).
+    %% {ok, State}.
+
 terminate(normal, _State) ->
-  ok;
-terminate(_Reason, _State) ->
-  io:format("terminate reason: ~p~n", [_Reason]).
+    ok;
+terminate(Reason, _State) ->
+    io:format("terminate reason: ~p~n", [Reason]).
