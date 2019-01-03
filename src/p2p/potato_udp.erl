@@ -100,7 +100,7 @@ handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
 
     %% logger:debug("got packet: ~p~n", [Packet]),
 
-    {ok, {NodeMaybeList, Msg}} = binary_to_term(Packet),
+    {NodeMaybeList, Msg} = binary_to_term(Packet),
 
 	    
     if is_list(NodeMaybeList) ->
