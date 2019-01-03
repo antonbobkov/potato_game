@@ -3,6 +3,9 @@
 
 -export([start_link/1, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
+-include_lib("eunit/include/eunit.hrl").
+-include_lib("stdlib/include/assert.hrl").
+
 -type udp_ip() :: string().
 -type udp_port() :: integer().
 -type udp_address() :: {udp_ip(), udp_port()}.
@@ -100,7 +103,9 @@ handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
 
     %% logger:debug("got packet: ~p~n", [Packet]),
 
-    {NodeMaybeList, Msg} = binary_to_term(Packet),
+    Data = {NodeMaybeList, Msg} = binary_to_term(Packet),
+
+    ?debugVal(Data),
 
 	    
     if is_list(NodeMaybeList) ->
