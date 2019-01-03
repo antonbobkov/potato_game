@@ -21,7 +21,9 @@ potato_udp_test() ->
 
     GameAddress = {{"localhost", Port}, my_id},
 
-    gen_server:cast(Pid, {send, GameAddress, "hi"}),
+    gen_server:cast(Pid, {send, [GameAddress], "hi"}),
+
+    timer:sleep(100),
 
     %% %% send an invalid message
     %% gen_server:cast(Pid, {send, {"localhost", Port}, "hi"}),

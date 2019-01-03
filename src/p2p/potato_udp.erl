@@ -10,7 +10,8 @@
 -type udp_port() :: integer().
 -type udp_address() :: {udp_ip(), udp_port()}.
 -type node_id() :: any().
--type node_address() :: {udp_address(), node_id() | [node_id()]}.
+-type node_address() :: {udp_address(), node_id()}.
+-type multi_node_address() :: {udp_address(), [node_id()]}.
 
 %% maps node_id to Pid of the process
 -type node_map() :: map().
@@ -38,7 +39,7 @@ handle_call(E, From, S) ->
 -spec handle_cast(Arg, state()) -> {noreply, state()} when
       Arg :: {add_node, node_id(), pid()}
 	     %% | {remove_node, {typetato:node_id(), typetato:verifier_id()}}
-	   | {send, node_address(), any()}
+	   | {optimized_send, multi_node_address(), any()}
 	   | {send, [node_address()], any()}.
 
 %% add a node_id => Pid to map
@@ -53,43 +54,37 @@ handle_cast({add_node, NodeId, Pid}, {Socket, NodeMap}) ->
 %%   Map2 = maps:put(Key, VerList2, Map),
 %%   {noreply, {Socket, Map2}};
 
-handle_cast({send, NodeAddressList, Msg}, S) when is_list(NodeAddressList) ->
-
-    OptimizedNodeAddressList = optimize_routing(NodeAddressList),
-    lists:foreach(fun(NodeAddress) -> handle_cast({send, NodeAddress, Msg}, S) end, OptimizedNodeAddressList),
-
-    {noreply, S};
 
 %% send a message to a remote host (possibly to multiple nodes)
 
-handle_cast({send, NodeAddress, Msg}, S) ->
+handle_cast({optimized_send, MultiNodeAddress, Msg}, S) ->
 
-    {{IpAddress, Port}, RemoteNodeList} = NodeAddress,
+    {{IpAddress, Port}, RemoteNodeList} = MultiNodeAddress,
     {Socket, _} = S,
 
     gen_udp:send(Socket, IpAddress, Port, term_to_binary({RemoteNodeList, Msg})),
 
-    {noreply, S}.
+    {noreply, S};
 
+handle_cast({send, NodeAddressList, Msg}, S) when is_list(NodeAddressList) ->
+
+    OptimizedNodeAddressList = optimize_routing(NodeAddressList),
+    lists:foreach(fun(NodeAddress) -> handle_cast({optimized_send, NodeAddress, Msg}, S) end, OptimizedNodeAddressList),
+
+    {noreply, S}.
 
 
 %% group messages by network address (so we don't duplicate messages to the same address)
 
--spec optimize_routing([node_address()]) -> [node_address()].
+-spec optimize_routing([node_address()]) -> [multi_node_address()].
 
 optimize_routing(NodeAddressList) when is_list(NodeAddressList) ->
-    append_fn = fun({NetAddress, NodeIdMaybeList}, MapIn) ->
-
-			if is_list(NodeIdMaybeList) ->
-				NodeIdList = NodeIdMaybeList;
-			   true ->
-				NodeIdList = [NodeIdMaybeList]
-			end,
+    AppendFn = fun({NetAddress, NodeId}, MapIn) ->
 			
-			maps:put(NetAddress, NodeIdList ++ maps:get(NetAddress, MapIn, []), MapIn)
+			maps:put(NetAddress, [NodeId | maps:get(NetAddress, MapIn, [])], MapIn)
 		end,
 
-    MessageMap = lists:foldl(append_fn, maps:new(), NodeAddressList),
+    MessageMap = lists:foldl(AppendFn, maps:new(), NodeAddressList),
 
     maps:to_list(MessageMap).
     
@@ -103,23 +98,16 @@ handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
 
     %% logger:debug("got packet: ~p~n", [Packet]),
 
-    Data = {NodeMaybeList, Msg} = binary_to_term(Packet),
+    _Data = {NodeList, Msg} = binary_to_term(Packet),
 
-    ?debugVal(Data),
+    %% ?debugVal(_Data),
 
-	    
-    if is_list(NodeMaybeList) ->
-	    NodeList = NodeMaybeList;
-       true ->
-	    NodeList = [NodeMaybeList]
-    end,
-
-    forward_fn = fun(NodeId) ->
+    ForwardFn = fun(NodeId) ->
 			 Pid = maps:get(NodeId, NodeMap),
 			 Pid ! {net, Msg}
 		 end,
 
-    lists:foreach(forward_fn, NodeList),
+    lists:foreach(ForwardFn, NodeList),
 
     {noreply, S};
 
