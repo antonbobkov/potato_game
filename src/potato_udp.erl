@@ -1,7 +1,7 @@
 -module(potato_udp).
 -behavior(gen_server).
 
--export([start_link/1, init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -29,9 +29,9 @@
 
 -type state() :: #udp_state{}.
 
--spec send_event(atom(), any(), state()) -> ok.
+-spec make_event(atom(), any(), state()) -> ok.
 
-send_event(Code, Data, State#udp_state{event_fn = EventFn}) ->
+make_event(Code, Data, _State = #udp_state{event_fn = EventFn}) ->
     EventFn(Code, Data),
     ok.
 
@@ -40,8 +40,6 @@ send_event(Code, Data, State#udp_state{event_fn = EventFn}) ->
 %%     gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
 
 -spec init(udp_port() | {udp_port(), event_fn()}) -> {ok, state()}.
-
-init(Port) -> init({Port, fun(_, _) -> ok end});
 
 init({Port, EventFn}) ->
     %%register(potato_udp, self()),
@@ -57,9 +55,12 @@ init({Port, EventFn}) ->
 	  event_fn = EventFn
 	},
 
-    send_event(start, Port, State),
+    make_event(start, Port, State),
 
-    {ok, State}.
+    {ok, State};
+
+init(Port) -> init({Port, fun(_, _) -> ok end}).
+
 
 %% Never used
 handle_call(E, From, S) ->
@@ -73,7 +74,7 @@ handle_call(E, From, S) ->
 %% add a node_id => Pid to map
 handle_cast({add_node, NodeId, Pid}, State) ->
 
-    send_event(add_node, {NodeId, Pid}, State),
+    make_event(add_node, {NodeId, Pid}, State),
     
     NodeMap2 = maps:put(NodeId, Pid, State#udp_state.node_map),
     {noreply, State#udp_state{node_map = NodeMap2}};
@@ -83,7 +84,7 @@ handle_cast({add_node, NodeId, Pid}, State) ->
 
 handle_cast({optimized_send, MultiNodeAddress, Msg}, State = #udp_state{socket = Socket}) ->
 
-    send_event(optimized_send, {MultiNodeAddress, Msg}, State),
+    make_event(optimized_send, {MultiNodeAddress, Msg}, State),
 
     {{IpAddress, Port}, RemoteNodeList} = MultiNodeAddress,
 
@@ -93,7 +94,7 @@ handle_cast({optimized_send, MultiNodeAddress, Msg}, State = #udp_state{socket =
 
 handle_cast({send, NodeAddressList, Msg}, State) when is_list(NodeAddressList) ->
 
-    send_event(send, {NodeAddressList, Msg}, State),
+    make_event(send, {NodeAddressList, Msg}, State),
 
     OptimizedNodeAddressList = optimize_routing(NodeAddressList),
 
@@ -121,14 +122,11 @@ optimize_routing(NodeAddressList) when is_list(NodeAddressList) ->
 %%   logger:alert("received packet ~p for unknown node id ~p~n",[Packet, NodeId]),
 %%   ok.
 
-handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
-    {_, NodeMap} = S,
-
-    %% logger:debug("got packet: ~p~n", [Packet]),
+handle_info(_NetData = {udp, Socket, IP, InPortNo, Packet}, State = #udp_state{node_map = NodeMap}) ->
 
     _Data = {NodeList, Msg} = binary_to_term(Packet),
 
-    %% ?debugVal(_Data),
+    make_event(udp, {Socket, IP, InPortNo, NodeList, Msg}, State),
 
     ForwardFn = fun(NodeId) ->
 			 Pid = maps:get(NodeId, NodeMap),
@@ -137,10 +135,9 @@ handle_info(_NetData = {udp, _Socket, _IP, _InPortNo, Packet}, S) ->
 
     lists:foreach(ForwardFn, NodeList),
 
-    {noreply, S};
+    {noreply, State};
 
 handle_info(E, S) ->
-    %% logger:alert("unexpected: ~p~n", [E]),
     erlang:error(unexpected_handle_info, [E, S]).
     %% {noreply, S}.
 
@@ -149,7 +146,6 @@ code_change(OldVsn, State, Extra) ->
     erlang:error(unexpected_code_change, [OldVsn, State, Extra]).
     %% {ok, State}.
 
-terminate(normal, _State) ->
-    ok;
-terminate(Reason, _State) ->
-    io:format("terminate reason: ~p~n", [Reason]).
+terminate(Reason, State) ->
+    make_event(terminate, Reason, State),
+    ok.
