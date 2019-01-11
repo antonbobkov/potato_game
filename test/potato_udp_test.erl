@@ -32,6 +32,29 @@ start_stop_test() ->
 
     ok.
 
+one_message_test() ->
+    Port = 3143,
+    MyPid = self(),
+
+    ForwardFn = fun(Code, Data) -> MyPid ! {Code, Data} end,
+
+    gen_server:start_link({local, potato_udp_name}, potato_udp, {Port, ForwardFn}, []),
+
+    gen_server:cast(potato_udp_name, {add_node, main_node, MyPid}),
+
+    NodeAddress = {{"localhost", Port}, main_node},
+
+    gen_server:cast(potato_udp_name, {send, [NodeAddress], "hi"}),
+
+    wait_for_event(net),
+
+    gen_server:stop(potato_udp_name),
+
+    wait_for_event(terminate),
+
+    ok.
+    
+
 
 %% potato_udp_test() ->
 %%     Port = 3142,
