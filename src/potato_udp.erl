@@ -16,11 +16,20 @@
 %% maps node_id to Pid of the process
 -type node_map() :: map().
 
+-record(udp_state, 
+	{
+	  my_registered_name :: any(),
+	  socket :: gen_udp:socket(),
+	  node_map :: node_map(),
+	  log_fn :: fun( (any(), any()) -> any() ) = fun(_, _) -> ok end,
+	}).
+
+
 -type state() :: {gen_udp:socket(), node_map()}.
 
 
-start_link(Port) ->
-    gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
+%% start_link(Port) ->
+%%     gen_server:start_link({local, potato_udp}, potato_udp, Port, []).
 
 -spec init(udp_port()) -> {ok, state()}.
 
