@@ -46,7 +46,7 @@ one_message_test() ->
 
     gen_server:cast(potato_udp_name, {send, [NodeAddress], "hi"}),
 
-    wait_for_event(net),
+    wait_for_event(net_udp),
 
     gen_server:stop(potato_udp_name),
 

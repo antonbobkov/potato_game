@@ -93,7 +93,7 @@ handle_cast({optimized_send, MultiNodeAddress, Msg}, State = #udp_state{socket =
     {noreply, State};
 
 handle_cast({send, NodeAddressList, Msg}, State) when is_list(NodeAddressList) ->
-
+    
     make_event(send, {NodeAddressList, Msg}, State),
 
     OptimizedNodeAddressList = optimize_routing(NodeAddressList),
@@ -129,8 +129,8 @@ handle_info(_NetData = {udp, Socket, IP, InPortNo, Packet}, State = #udp_state{n
     make_event(udp, {Socket, IP, InPortNo, NodeList, Msg}, State),
 
     ForwardFn = fun(NodeId) ->
-			 Pid = maps:get(NodeId, NodeMap),
-			 Pid ! {net, Msg}
+			 NodePid = maps:get(NodeId, NodeMap),
+			 NodePid ! {net_udp, Msg}
 		 end,
 
     lists:foreach(ForwardFn, NodeList),

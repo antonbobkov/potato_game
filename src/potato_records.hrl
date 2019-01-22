@@ -10,7 +10,11 @@
 
 -record(pop_chain, {pop_config_data, tree_data, head_block, genisys_block}).
 
--record(pop_manager_config, {request_range_backup, net_send, on_new_block}).
+-record(pop_manager_config, {request_range_backup, 
+			     net_send, 
+			     net_multi_send, 
+			     on_new_block}).
+
 -record(pop_manager, {unbound_blocks, pop_chain, config}).
 
 -record(pop_verifier_config, {sub_time_out, my_index, my_key}).

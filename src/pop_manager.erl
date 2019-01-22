@@ -21,6 +21,21 @@
 
 -include("potato_records.hrl").
 
+%% doc Converts single address send fun to address list send fun.
+%% Send message to each address in list one by one.
+
+fn_convert_to_multi_address(NetSendFn) ->
+    fun(AddressList, MsgId, Data) ->
+	    lists:foreach(fun(Address) -> NetSendFn(Address, MsgId, Data) end, AddressList)
+    end.
+
+%% doc Converts address list send fun to single address send fun.
+%% send to singleton list
+fn_convert_to_single_address(NetSendFn) ->
+    fun(Address, MsgId, Data) ->
+	    NetSendFn([Address], MsgId, Data)
+    end.
+
 %% @doc Makes new container, using pop protocol config data,
 %% and external function hooks.
 %% 
@@ -29,9 +44,37 @@
 %% - on_new_block: react to new block added to chain
 
 new(PopConfigData, PopManagerConfig) ->
+    NetMultiSendFn = PopManagerConfig#pop_manager_config.net_multi_send,
+
+    NetSendFn = PopManagerConfig#pop_manager_config.net_send,
+    
+
+    %% One of those functions can be initialized to be undefined
+    %% in that case, we initialize it by hand
+
+    if NetMultiSendFn == undefined ->
+	    ?assertNotEqual(undefined, NetSendFn),
+
+    	    NetMultiSendFnMod = fn_convert_to_multi_address(NetSendFn),
+
+	    FinalPopManagerConfig = PopManagerConfig#pop_manager_config{net_multi_send = NetMultiSendFnMod};
+
+       NetSendFn == undefined ->
+	    ?assertNotEqual(undefined, NetMultiSendFn),
+
+    	    NetSendFnMod = fn_convert_to_single_address(NetMultiSendFn),
+
+	    FinalPopManagerConfig = PopManagerConfig#pop_manager_config{net_send = NetSendFnMod};
+
+       true ->
+    	    FinalPopManagerConfig = PopManagerConfig
+    end,
+
     #pop_manager{
        pop_chain = pop_chain:new(PopConfigData),
-       config = PopManagerConfig,
+
+       config = FinalPopManagerConfig,
+
        unbound_blocks = maps:new()
       }.
     

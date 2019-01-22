@@ -67,9 +67,11 @@ emit_net_message(subs, MsdId, Data, PopVerifier) ->
     emit_net_message_to_list(maps:keys(PopVerifier#pop_verifier.subscribers), MsdId, Data, PopVerifier).
 
 emit_net_message_to_list(AddressList, MsdId, Data, PopVerifier) ->
-    NetSendFn = PopVerifier#pop_verifier.pop_manager#pop_manager.config#pop_manager_config.net_send,
+    NetMultiSendFn = PopVerifier#pop_verifier.pop_manager#pop_manager.config#pop_manager_config.net_multi_send,
 
-    lists:foreach(fun(Address) -> NetSendFn(Address, MsdId, Data) end, AddressList),
+    %% lists:foreach(fun(Address) -> NetSendFn(Address, MsdId, Data) end, AddressList),
+    
+    NetMultiSendFn(AddressList, MsdId, Data),
     
     ok.
 
@@ -101,7 +103,13 @@ on_timer(CurrentTime, PV0) ->
 
 %% @doc Sends new block info to subscribers
 on_new_block(NewBlock, PopVerifier) ->
-    emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier),
+    if length(subs) /= 0 ->
+	    emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier);
+
+       true -> 
+	    ok
+    end,
+				 
     PopVerifier.
 
 %% @doc starts loop handling the verifier
@@ -119,33 +127,50 @@ start_loop(PopConfigData, PopManagerConfig, PopVerConfig, TimerIntervalSec, OnEx
 
     PopVerifier = new(PopConfigData, PopManagerConfig#pop_manager_config{on_new_block = OnNewBlockFn}, PopVerConfig),
 
-    loop(PopVerifier, Data).
+    loop(PopVerifier, undefined, Data).
 
-loop(State, Data = {TimerRef, OnExitFn}) ->
-    %% ?debugHere,
-    %% ?debugFmt("verifier loop ~p~n", [self()]),
+loop(State, Time, Data = {TimerRef, OnExitFn}) ->
+
     receive 
+ 	{net_udp, {SenderAddress, MsgId, NetData} } ->
+	    ?assertNotEqual(undefined, Time),
+
+	    NewState = on_net_message(SenderAddress, Time, MsgId, NetData, State),
+	    NewTime = Time;
+
  	{net, SenderAddress, CurrentTime, MsgId, NetData} ->
-	    NewState = on_net_message(SenderAddress, CurrentTime, MsgId, NetData, State);
+	    NewState = on_net_message(SenderAddress, CurrentTime, MsgId, NetData, State),
+	    NewTime = CurrentTime;
+
 	{timer_custom, CurrentTime} ->
-	    NewState = on_timer(CurrentTime, State);
+	    NewState = on_timer(CurrentTime, State),
+	    NewTime = CurrentTime;
+
 	timer_real ->
 	    CurrentTime = erlang:system_time(second),
-	    NewState = on_timer(CurrentTime, State);
+	    NewState = on_timer(CurrentTime, State),
+	    NewTime = CurrentTime;
+
 	{new_block, Block} ->
-	    NewState = on_new_block(Block, State);
+	    NewState = on_new_block(Block, State),
+	    NewTime = Time;
+
 	exit ->
 	    if TimerRef /= no_timer ->
 		    {ok, cancel} = timer:cancel(TimerRef);
 	       true -> ok
 	    end,
-	    NewState = exit;
+
+	    NewState = exit,
+	    NewTime = Time;
+
 	Any ->
-	    NewState = erlang:error({"unexpected message", Any})
+	    NewState = erlang:error({"unexpected message", Any}),
+	    NewTime = Time
     end,
     
     if NewState /= exit ->
-	    loop(NewState, Data);
+	    loop(NewState, NewTime, Data);
        true -> 
 	    %% ?debugFmt("exit verifier loop ~p~n", [self()]),
 	    OnExitFn(),
