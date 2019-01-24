@@ -1,0 +1,10 @@
+{
+  "name"  :   "John",
+  "age" : 30,
+  "cars": {
+    "car1":"Ford",
+    "car2":"BMW",
+    "car3":"Fiat"
+  },
+    "data" : [1, 2, "three",],
+ }

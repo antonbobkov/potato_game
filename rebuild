@@ -1,0 +1,4 @@
+#/bin/bash
+
+rm -rf _build
+rebar3 eunit
