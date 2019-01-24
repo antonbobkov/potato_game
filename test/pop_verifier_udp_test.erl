@@ -91,23 +91,19 @@ verifier_start_stop_test() ->
 
     ok.
 
-udp_five_ver_start(NetAddress = {_IP, Port}, UdpServerName, ForwardFn) ->
+udp_ver_start(NetAddress = {_IP, Port}, UdpServerName, ForwardFn, VerTot) ->
 
     gen_server:start_link({local, UdpServerName}, potato_udp, {Port, ForwardFn}, []),
 
-    {VerifierArr, PrivateKey, _PublicKey} = make_verifier_array(5, NetAddress),
-
-    VerNumList = [0, 1, 2, 3, 4],
+    {VerifierArr, PrivateKey, _PublicKey} = make_verifier_array(VerTot, NetAddress),
 
     VerPidList = lists:map(fun(VerNum) -> 
 				   start_pv(VerifierArr, PrivateKey, VerNum, UdpServerName)
-			   end, VerNumList),
-    
-
+			   end, lists:seq(0, VerTot - 1)),
     
     {VerPidList, UdpServerName}.
     
-udp_five_ver_stop({VerPidList, UdpServerName}) ->
+udp_ver_stop({VerPidList, UdpServerName}) ->
 
     lists:foreach(fun(VerPid) ->
 			  VerPid ! exit
@@ -122,27 +118,50 @@ broadcast(VerPidList, Msg) ->
 			  VerPid ! Msg
 		  end, VerPidList).
 
+wait_for_message(Code) ->
+    receive 
+	Code ->
+	    ok
+    after 100 ->
+	    erlang:error(timeout)
+    end.
 
-one_tick_test() ->
+wait_for_message(Code, Count) ->
+    lists:foreach(fun(_) -> wait_for_message(Code) end, lists:seq(1, Count)).
+
+one_udp_tick_test() ->
 
     Port = 3144,
     NetAddress = {"localhost", Port},
 
-    %% MyPid = self(),
-    ForwardFn = fun(Code, Data) -> 
-			?debugFmt("~p ~p ~n", [Code, Data])
-			%% MyPid ! {Code, Data} 
+    MyPid = self(),
+    ForwardFn = fun(Code, _Data) -> 
+			%% ?debugFmt("~p ~p ~n", [Code, Data])
+			MyPid ! Code 
 		end,
 
     %% ForwardFn = fun(_, _) -> ok end,
 
-    {VerPidList, _} = StateData = udp_five_ver_start(NetAddress, one_tick_udp_server, ForwardFn),
+    {VerPidList, _} = StateData = udp_ver_start(NetAddress, one_tick_udp_server, ForwardFn, 5),
+
+    wait_for_message(start),
+    wait_for_message(add_node, 5),
 
     broadcast(VerPidList, {timer_custom, 110}),
 
-    timer:sleep(100),
+    wait_for_message(send),
+    wait_for_message(optimized_send),
+    wait_for_message(udp),
 
-    udp_five_ver_stop(StateData),
+    broadcast(VerPidList, {timer_custom, 120}),
+
+    wait_for_message(send),
+    wait_for_message(optimized_send),
+    wait_for_message(udp),
+
+    udp_ver_stop(StateData),
+
+    wait_for_message(terminate),
 
     ok.
     

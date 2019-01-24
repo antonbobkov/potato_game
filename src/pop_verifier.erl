@@ -103,7 +103,9 @@ on_timer(CurrentTime, PV0) ->
 
 %% @doc Sends new block info to subscribers
 on_new_block(NewBlock, PopVerifier) ->
-    if length(subs) /= 0 ->
+    Sz = maps:size(PopVerifier#pop_verifier.subscribers),
+
+    if Sz /= 0 ->
 	    emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier);
 
        true -> 
