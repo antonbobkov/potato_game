@@ -11,22 +11,26 @@ json_get(Key, Map) when is_atom(Key) ->
 json_get(Key, Map) when is_list(Key) ->
     maps:get(list_to_binary(Key), Map).
 
-make_verifier_array(JsonVerifierConf, ChainId) ->
+make_verifier_array(JsonConf) ->
 
-    VerFunc = fun(Index, VerConf) -> 
-		      PublicKeyFile = json_get(public_key, VerConf),
+    ChainId = json_get(chain_id, JsonConfig),
+    JsonVerifierConf = json_get(verifiers, JsonConfig),
 
-		      Ip = json_get(ip, VerConf),
-		      Port = json_get(port, VerConf),
+    VerFunc = 
+	fun(Index, VerConf) -> 
+		PublicKeyFile = json_get(public_key, VerConf),
 
-		      NetAddress = {Ip, Port},
+		Ip = json_get(ip, VerConf),
+		Port = json_get(port, VerConf),
 
-		      #verifier_public_info{
-			 index = Index, 
-			 public_key = my_crypto:read_file_key(public, PublicKeyFile),
-			 network_data = {NetAddress, {ChainId, verifier, Index}}
-			} 
-	      end,
+		NetAddress = {Ip, Port},
+
+		#verifier_public_info{
+		   index = Index, 
+		   public_key = my_crypto:read_file_key(public, PublicKeyFile),
+		   network_data = {NetAddress, {ChainId, verifier, Index}}
+		  } 
+	end,
 
     VerifierArr = array:map(VerFunc, array:from_list(JsonVerifierConf)),
 
@@ -38,6 +42,9 @@ start_pv(VerifierArr, JsonConfig, MyIndex, UdpServerId) ->
 
     {_NetworkAddress, MyNodeId} = MyAddress,
 
+    JsonVerifierConf = json_get(verifiers, JsonConfig),
+    MyConf = array:get(MyIndex, array:from_list(JsonVerifierConf)),
+    PrivateKeyFile = json_get(private_key, MyConf),
     PrivateKey = my_crypto:read_file_key(private, PrivateKeyFile),
 
 
@@ -78,6 +85,55 @@ start_pv(VerifierArr, JsonConfig, MyIndex, UdpServerId) ->
     gen_server:cast(UdpServerId, {add_node, MyNodeId, VerifierPid}),
 
     VerifierPid.
+
+start_server_cluster(VerifierArr, JsonConfig, ServerAddress, UdpServerId, ForwardFn) ->
+    {_Ip, Port} = ServerAddress,
+    gen_server:start_link({local, UdpServerId}, potato_udp, {Port, ForwardFn}, []),
+
+    VerList = lists:filter(
+		fun(VerData) ->
+			{VerAddress, _} = VerData#verifier_public_info.network_data,
+			VerAddress == ServerAddress
+		end,
+		array:to_list(VerifierArr)),
+
+    IndexList = lists:map(
+		  fun(VerData) ->
+			  VerData#verifier_public_info.index
+		  end,
+		  VerList)
+
+    PidList = lists:foreach(
+		fun(VerIndex) ->
+			start_pv(VerifierArr, JsonConfig, VerIndex, UdpServerId)
+		end, 
+		IndexList),
+    PidList.
+
+start_from_json(JsonConfig, ForwardFn) ->
+    VerifierArr = make_verifier_array(JsonConfig),
+
+    VerAddressList = lists:map(
+		       fun(VerData) ->
+			       {VerAddress, _} = VerData#verifier_public_info.network_data,
+			       VerAddress
+		       end,
+		       array:to_list(VerifierArr)),
+
+    VerAddressUniqueList = sets:to_list(sets:from_list(VerAddressList)),
+
+    ProcessData = lists:map(
+		    fun(Address) ->
+			    UdpServerId = {udp_server, Address},
+			    PidList = start_server_cluster(VerifierArr, JsonConfig, Address, UdpServerId, ForwardFn),
+			    {UdpServerId, PidList}
+		    end, 
+		    VerAddressUniqueList),
+
+    {UdpIdList, VerifierPidList} = lists:unzip(ProcessData),
+
+    {UdpIdList, lists:flatten(VerifierPidList)}.
+    
 
 
 verifier_start_stop_test() ->
