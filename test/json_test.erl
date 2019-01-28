@@ -16,7 +16,7 @@ basic_test() ->
 
     jsx:decode(File, [return_maps]),
 
-    {ok, File2} = file:read_file(<<"test/chain_config_test.json">>),
+    {ok, File2} = file:read_file(<<"test/test_config_3.json">>),
     _Obj = jsx:decode(File2, [return_maps]),
 
 
