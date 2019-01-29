@@ -4,3 +4,7 @@ matrix:
     - os: linux
       otp_release: 21.0
 script: rebar3 eunit && rebar3 dialyzer
+install:
+    pip install codecov
+after_success:
+    codecov
