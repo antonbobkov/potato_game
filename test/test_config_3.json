@@ -1,12 +1,18 @@
 {
+    // Essential parameters:
+    // those have to be the same for all verifiers
     "genesis_block_timestamp_sec" : 100,
     "time_between_blocks_sec" : 10,
     "chain_id" : "hype_chain",
 
+    // Nonessential parameters,
+    // those can vary to adjust performance
     "timestamp_tolerable_error_sec" : 5,
     "block_request_range_size" : 3,
     "subscriber_time_out_sec" : 20,
 
+    // list of all verifiers
+    // (essential, except for private key info)
     "verifiers" : [
 	{
 	    "public_key" : "key1.pub",
