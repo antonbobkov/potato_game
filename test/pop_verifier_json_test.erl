@@ -60,7 +60,7 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 			  request_range_backup = json_get(block_request_range_size, JsonConf),
 
 			  net_multi_send = fun(DestAddressList, MsgId, Data) -> 
-				             gen_server:cast(UdpServerId, {send, DestAddressList, {MyAddress, MsgId, Data} })
+				             gen_server:cast({global, UdpServerId}, {send, DestAddressList, {MyAddress, MsgId, Data} })
 					   end,
 
 			  on_new_block = undefined
@@ -82,13 +82,17 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 				      )
 			     end),
 
-    gen_server:cast(UdpServerId, {add_node, MyNodeId, VerifierPid}),
+    gen_server:cast({global, UdpServerId}, {add_node, MyNodeId, VerifierPid}),
 
     VerifierPid.
 
 start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
     {_Ip, Port} = ServerAddress,
-    gen_server:start_link({local, UdpServerId}, potato_udp, {Port, ForwardFn}, []),
+
+    %% ?debugVal(ServerAddress),
+    %% ?debugVal(UdpServerId),
+
+    gen_server:start_link({global, UdpServerId}, potato_udp, {Port, ForwardFn}, []),
 
     VerList = lists:filter(
 		fun(VerData) ->
@@ -103,7 +107,7 @@ start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardF
 		  end,
 		  VerList),
 
-    PidList = lists:foreach(
+    PidList = lists:map(
 		fun(VerIndex) ->
 			start_pv(VerifierArr, JsonConf, VerIndex, UdpServerId)
 		end, 
@@ -132,12 +136,16 @@ start_from_json(JsonConf, ForwardFn) ->
 
     {UdpIdList, VerifierPidList} = lists:unzip(ProcessData),
 
+    %% ?debugVal(UdpIdList),
+    %% ?debugVal(VerifierPidList),
+    %% ?debugVal(lists:flatten(VerifierPidList)),
+
     {UdpIdList, lists:flatten(VerifierPidList)}.
     
 stop_all({UdpIdList, VerifierPidList}) ->
     lists:foreach(
       fun(UdpId) ->
-	      gen_server:stop(UdpId)
+	      gen_server:stop({global, UdpId})
       end,
       UdpIdList),
 
