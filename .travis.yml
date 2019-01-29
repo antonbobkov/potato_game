@@ -3,8 +3,17 @@ matrix:
   include:
     - os: linux
       otp_release: 21.0
-script: rebar3 eunit && rebar3 dialyzer
+
+script:
+  - rebar3 eunit
+  - rebar3 dialyzer
+  - rebar3 cover
+  - rebar3 covertool generate
+  - cp _build/test/covertool/potatoserver.covertool.xml ./cobertura.xml
+  
 install:
     sudo pip install codecov
+    
 after_success:
     codecov
+    
