@@ -19,7 +19,6 @@ basic_test() ->
     {ok, File2} = file:read_file(<<"test/test_config_3.json">>),
     _Obj = jsx:decode(File2, [return_maps]),
 
-
     %% ?debugVal(Obj),
 
     ok.
