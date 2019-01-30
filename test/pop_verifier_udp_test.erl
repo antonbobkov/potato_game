@@ -52,18 +52,15 @@ start_pv(VerifierArr, PrivateKey, VerifierIndex, UdpServerId) ->
     PopVerifierConfig = #pop_verifier_config{
 			   sub_time_out = 20,
 			   my_index = VerifierIndex,
-			   my_key = PrivateKey
+			   my_key = PrivateKey,
+			   timer_interval = none,
+			   event_fn = fun(_, _) -> ok end
 			  },
 
-    VerifierPid = spawn_link(fun() -> 
-				     pop_verifier:start_loop( 
-				       PopChainConfig, 
-				       PopManagerConfig, 
-				       PopVerifierConfig, 
-				       no_timer, 
-				       fun () -> ok end
-				      )
-			     end),
+    InitData = {PopChainConfig, PopManagerConfig, PopVerifierConfig},
+    
+    
+    {ok, VerifierPid} = gen_server:start_link(pop_verifier, InitData, []),
 
     gen_server:cast(UdpServerId, {add_node, MyNodeId, VerifierPid}),
 
@@ -85,7 +82,7 @@ verifier_start_stop_test() ->
 
     VerifierPid = start_pv(VerifierArr, PrivateKey, 0, potato_udp_name),
 
-    VerifierPid ! exit,
+    gen_server:stop(VerifierPid),
 
     gen_server:stop(potato_udp_name),
 
@@ -106,7 +103,7 @@ udp_ver_start(NetAddress = {_IP, Port}, UdpServerName, ForwardFn, VerTot) ->
 udp_ver_stop({VerPidList, UdpServerName}) ->
 
     lists:foreach(fun(VerPid) ->
-			  VerPid ! exit
+			  gen_server:stop(VerPid)
 		  end, VerPidList),
 
     gen_server:stop(UdpServerName),
@@ -147,13 +144,13 @@ one_udp_tick_test() ->
     wait_for_message(start),
     wait_for_message(add_node, 5),
 
-    broadcast(VerPidList, {timer_custom, 110}),
+    broadcast(VerPidList, {custom_timer_tick, 110}),
 
     wait_for_message(send),
     wait_for_message(optimized_send),
     wait_for_message(udp),
 
-    broadcast(VerPidList, {timer_custom, 120}),
+    broadcast(VerPidList, {custom_timer_tick, 120}),
 
     wait_for_message(send),
     wait_for_message(optimized_send),

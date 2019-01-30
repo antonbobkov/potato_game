@@ -84,6 +84,9 @@ get_current_time(State) ->
 init(InitData = {PopConfigData, PopManagerConfig, PopVerConfig}) ->
     TimerIntervalSec = PopVerConfig#pop_verifier_config.timer_interval,
 
+    ?assertNotEqual(undefined, TimerIntervalSec),
+    ?assertNotEqual(undefined, PopVerConfig#pop_verifier_config.event_fn),
+
     if TimerIntervalSec == none ->
 	    CurrentTime = PopConfigData#pop_config_data.init_time,
 	    TimerRef = undefined;
@@ -93,6 +96,8 @@ init(InitData = {PopConfigData, PopManagerConfig, PopVerConfig}) ->
     end,
 
     OnNewBlockFn = fun(Block) -> self() ! {new_block, Block} end,
+
+    ?assertEqual(undefined, PopManagerConfig#pop_manager_config.on_new_block),
 
     NewPopManagerConfig = PopManagerConfig#pop_manager_config{on_new_block = OnNewBlockFn},
 
@@ -178,17 +183,17 @@ handle_info({custom_timer_tick, CurrentTime}, State) ->
 
     {noreply, State2};
 
-handle_info(Data, State) ->
-    erlang:error(unexpected_handle_info, [Data, State]).
+handle_info(Data, _State) ->
+    erlang:error(unexpected_handle_info, [Data]).
 
-handle_cast(Data, State) ->
-    erlang:error(unexpected_handle_cast, [Data, State]).
+handle_cast(Data, _State) ->
+    erlang:error(unexpected_handle_cast, [Data]).
 
-handle_call(E, From, S) ->
-    erlang:error(unexpected_handle_call, [E, From, S]).
+handle_call(E, From, _S) ->
+    erlang:error(unexpected_handle_call, [E, From]).
 
-code_change(OldVsn, State, Extra) ->
-    erlang:error(unexpected_code_change, [OldVsn, State, Extra]).
+code_change(OldVsn, _State, Extra) ->
+    erlang:error(unexpected_code_change, [OldVsn, Extra]).
 
 terminate(Reason, State) ->
 
