@@ -1,51 +1,17 @@
-%% @doc code that handles running a full verifier node.
-
 -module(pop_verifier).
+-behavior(gen_server).
 
--export([
-	 new/3,
-	 on_net_message/5,
-	 on_timer/2,
-	 on_new_block/2,
-	 start_loop/5
-	]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 -include("potato_records.hrl").
 
-
-%% @doc Create new verifier. 
-%% 
-%% Needs to hook up PopManagerConfig.on_new_block to pop_verifier:on_new_block
-
-new(PopConfigData, PopManagerConfig, PopVerConfig) ->
-    #pop_verifier{
-       subscribers = maps:new(),
-       pop_manager = pop_manager:new(PopConfigData, PopManagerConfig),
-       config = PopVerConfig,
-       verifiers_arr = PopConfigData#pop_config_data.verifiers_arr
-      }.
-
-%% @doc Adds/updates a subscriber.
-%% 
-%% Subscribers are sent updates on when new blocks are added.
-%% Each sub expired after a fixed time, to stay subscribed this message needs to be spammed periodically.
-%% (Similar to ping)
-
-on_net_message(SenderAddress, CurrentTime, subscribe, _, PopVerifier) ->
-    Subs = PopVerifier#pop_verifier.subscribers,
-
-    PopVerifier#pop_verifier{subscribers = maps:put(SenderAddress, CurrentTime, Subs)};
-
-on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopVerifier) ->
-    PM0 = PopVerifier#pop_verifier.pop_manager,
-
-    PM1 = pop_manager:on_net_message(SenderAddress, CurrentTime, MsgId, Data, PM0),
-    
-    PopVerifier#pop_verifier{pop_manager = PM1}.
-
+make_event(Code, Data, State) ->
+    EventFn = State#pop_verifier.config#pop_verifier_config.event_fn,
+    EventFn(Code, Data),
+    ok.
 
 subscriber_clean_up(CurrentTime, PopVerifier) ->
     Timeout = PopVerifier#pop_verifier.config#pop_verifier_config.sub_time_out,
@@ -75,8 +41,6 @@ emit_net_message_to_list(AddressList, MsdId, Data, PopVerifier) ->
     
     ok.
 
-%% @doc Process time related events: subscriber clean up and block generation
-
 on_timer(CurrentTime, PV0) ->
     PV1 = subscriber_clean_up(CurrentTime, PV0),
 
@@ -101,81 +65,140 @@ on_timer(CurrentTime, PV0) ->
     
     PV1.
 
-%% @doc Sends new block info to subscribers
-on_new_block(NewBlock, PopVerifier) ->
-    Sz = maps:size(PopVerifier#pop_verifier.subscribers),
+get_current_time(State) ->
+    InitInterval = State#pop_verifier.config#pop_verifier_config.timer_interval,
+
+    CurrentTime = State#pop_verifier.current_time,
+
+    if CurrentTime == undefined ->
+	    ?assertNotEqual(none, InitInterval),
+
+	    erlang:system_time(second);
+       true ->
+	    ?assertEqual(none, InitInterval),
+
+	    CurrentTime
+    end.
+    
+
+init(InitData = {PopConfigData, PopManagerConfig, PopVerConfig}) ->
+    TimerIntervalSec = PopVerConfig#pop_verifier_config.timer_interval,
+
+    if TimerIntervalSec == none ->
+	    CurrentTime = PopConfigData#pop_config_data.init_time,
+	    TimerRef = undefined;
+       true ->
+	    CurrentTime = undefined,
+	    {ok, TimerRef} = timer:send_interval(TimerIntervalSec * 1000, real_timer_tick)
+    end,
+
+    OnNewBlockFn = fun(Block) -> self() ! {new_block, Block} end,
+
+    NewPopManagerConfig = PopManagerConfig#pop_manager_config{on_new_block = OnNewBlockFn},
+
+    State = #pop_verifier{
+	       subscribers = maps:new(),
+	       pop_manager = pop_manager:new(PopConfigData, NewPopManagerConfig),
+	       config = PopVerConfig,
+	       verifiers_arr = PopConfigData#pop_config_data.verifiers_arr,
+
+	       current_time = CurrentTime,
+	       timer_ref = TimerRef
+	      },
+
+    make_event(start, InitData, State),
+
+    {ok, State}.
+
+%% @doc Adds/updates a subscriber.
+%% 
+%% Subscribers are sent updates on when new blocks are added.
+%% Each sub expired after a fixed time, to stay subscribed this message needs to be spammed periodically.
+%% (Similar to ping)
+
+handle_info({net_udp, Data = {SenderAddress, subscribe, _} }, State) ->
+
+    make_event(net_udp, Data, State),
+ 
+    CurrentTime = get_current_time(State),
+
+    Subs = State#pop_verifier.subscribers,
+
+    NewState = State#pop_verifier{subscribers = maps:put(SenderAddress, CurrentTime, Subs)},
+
+    {noreply, NewState};
+
+handle_info({net_udp, Data = {SenderAddress, MsgId, NetData} }, State) ->
+
+    make_event(net_udp, Data, State),
+
+    CurrentTime = get_current_time(State),
+
+    PM0 = State#pop_verifier.pop_manager,
+
+    PM1 = pop_manager:on_net_message(SenderAddress, CurrentTime, MsgId, NetData, PM0),
+    
+    NewState = State#pop_verifier{pop_manager = PM1},
+
+    {noreply, NewState};
+
+handle_info({new_block, NewBlock}, State) ->
+    make_event(new_block, NewBlock, State),
+
+    Sz = maps:size(State#pop_verifier.subscribers),
 
     if Sz /= 0 ->
-	    emit_net_message(subs, send_full_blocks, {new, NewBlock}, PopVerifier);
+	    emit_net_message(subs, send_full_blocks, {new, NewBlock}, State);
 
        true -> 
 	    ok
     end,
 				 
-    PopVerifier.
+    {noreply, State};
 
-%% @doc starts loop handling the verifier
+handle_info(real_timer_tick, State) ->
+    ?assertNotEqual(undefined, State#pop_verifier.timer_ref),
 
-start_loop(PopConfigData, PopManagerConfig, PopVerConfig, TimerIntervalSec, OnExitFn) ->
+    CurrentTime = erlang:system_time(second),
 
-    if TimerIntervalSec /= no_timer ->
-	    {ok, TimerRef} = timer:send_interval(TimerIntervalSec * 1000, timer_real),
-	    Data = {TimerRef, OnExitFn};
-       true ->
-	    Data = {no_timer, OnExitFn}
+    make_event(real_timer_tick, CurrentTime, State),
+
+    NewState = on_timer(CurrentTime, State),
+
+    {noreply, NewState};
+
+handle_info({custom_timer_tick, CurrentTime}, State) ->
+    ?assertEqual(undefined, State#pop_verifier.timer_ref),
+
+    make_event(custom_timer_tick, CurrentTime, State),
+
+    State1 = on_timer(CurrentTime, State),
+
+    State2 = State1#pop_verifier{current_time = CurrentTime},
+
+    {noreply, State2};
+
+handle_info(Data, State) ->
+    erlang:error(unexpected_handle_info, [Data, State]).
+
+handle_cast(Data, State) ->
+    erlang:error(unexpected_handle_cast, [Data, State]).
+
+handle_call(E, From, S) ->
+    erlang:error(unexpected_handle_call, [E, From, S]).
+
+code_change(OldVsn, State, Extra) ->
+    erlang:error(unexpected_code_change, [OldVsn, State, Extra]).
+
+terminate(Reason, State) ->
+
+    TimerRef = State#pop_verifier.timer_ref,
+
+    if TimerRef /= undefined ->
+	    {ok, cancel} = timer:cancel(TimerRef);
+       true -> ok
     end,
 
-    OnNewBlockFn = fun(Block) -> self() ! {new_block, Block} end,
+    make_event(terminate, Reason, State),
 
-    PopVerifier = new(PopConfigData, PopManagerConfig#pop_manager_config{on_new_block = OnNewBlockFn}, PopVerConfig),
-
-    loop(PopVerifier, undefined, Data).
-
-loop(State, Time, Data = {TimerRef, OnExitFn}) ->
-
-    receive 
- 	{net_udp, {SenderAddress, MsgId, NetData} } ->
-	    ?assertNotEqual(undefined, Time),
-
-	    NewState = on_net_message(SenderAddress, Time, MsgId, NetData, State),
-	    NewTime = Time;
-
- 	{net, SenderAddress, CurrentTime, MsgId, NetData} ->
-	    NewState = on_net_message(SenderAddress, CurrentTime, MsgId, NetData, State),
-	    NewTime = CurrentTime;
-
-	{timer_custom, CurrentTime} ->
-	    NewState = on_timer(CurrentTime, State),
-	    NewTime = CurrentTime;
-
-	timer_real ->
-	    CurrentTime = erlang:system_time(second),
-	    NewState = on_timer(CurrentTime, State),
-	    NewTime = CurrentTime;
-
-	{new_block, Block} ->
-	    NewState = on_new_block(Block, State),
-	    NewTime = Time;
-
-	exit ->
-	    if TimerRef /= no_timer ->
-		    {ok, cancel} = timer:cancel(TimerRef);
-	       true -> ok
-	    end,
-
-	    NewState = exit,
-	    NewTime = Time;
-
-	Any ->
-	    NewState = erlang:error({"unexpected message", Any}),
-	    NewTime = Time
-    end,
-    
-    if NewState /= exit ->
-	    loop(NewState, NewTime, Data);
-       true -> 
-	    %% ?debugFmt("exit verifier loop ~p~n", [self()]),
-	    OnExitFn(),
-	    ok
-    end.
-	    
+    ok.

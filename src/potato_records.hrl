@@ -17,8 +17,24 @@
 
 -record(pop_manager, {unbound_blocks, pop_chain, config}).
 
--record(pop_verifier_config, {sub_time_out, my_index, my_key}).
--record(pop_verifier, {config, verifiers_arr, subscribers, pop_manager}).
+-record(pop_verifier_config,
+	{
+	  sub_time_out, 
+	  my_index, 
+	  my_key,
+	  event_fn,
+	  timer_interval
+	}).
+
+-record(pop_verifier, 
+	{
+	  config,
+	  current_time,
+	  timer_ref,
+	  verifiers_arr,
+	  subscribers,
+	  pop_manager
+	}).
 
 -record(game_state,
   {gameid :: integer(),

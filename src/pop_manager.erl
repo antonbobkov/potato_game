@@ -344,18 +344,7 @@ on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
     
     NewPC = lists:foldl(FoldFn, PC, TransactionList),
 
-    PopManager#pop_manager{pop_chain = NewPC}.
+    PopManager#pop_manager{pop_chain = NewPC};
 
-%% doc Loop that handles messages.
-
-%% loop(PopManager) ->
-%%     receive 
-%% 	{net, SenderAddress, CurrentTime, MsgId, Data} ->
-%% 	    NewPopManager = on_net_message(SenderAddress, CurrentTime, MsgId, Data, PopManager),
-%% 	    loop(NewPopManager);
-%% 	exit ->
-%% 	    done;
-%% 	Unexpected ->
-%% 	    ?debugVal(Unexpected),
-%% 	    erlang:error("unexpected message")
-%%     end.
+on_net_message(SenderAddress, CurrentTime, MsgId, MsgData, PopManager) ->
+    erlang:error(unknown_net_message, [SenderAddress, CurrentTime, MsgId, MsgData, PopManager]).
