@@ -14,7 +14,10 @@ basic_test() ->
 
     {ok, File} = file:read_file("test/json.json"),
 
-    _Obj = jsx:decode(File, [return_maps]),
+    jsx:decode(File, [return_maps]),
+
+    {ok, File2} = file:read_file(<<"test/test_config_3.json">>),
+    _Obj = jsx:decode(File2, [return_maps]),
 
     %% ?debugVal(Obj),
 
