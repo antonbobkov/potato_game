@@ -20,7 +20,7 @@ make_verifier_array(JsonConf) ->
 	fun(Index, VerConf) -> 
 		PublicKeyFile = json_get(public_key, VerConf),
 
-		Ip = json_get(ip, VerConf),
+		Ip = binary_to_list(json_get(ip, VerConf)),
 		Port = json_get(port, VerConf),
 
 		NetAddress = {Ip, Port},
@@ -173,98 +173,52 @@ start_stop_test() ->
     ok.
     
 
-%% verifier_start_stop_test() ->
-%%     Port = 3143,
-%%     NetAddress = {"localhost", Port},
 
-%%     %% MyPid = self(),
-%%     %% ForwardFn = fun(Code, Data) -> MyPid ! {Code, Data} end,
+broadcast(VerPidList, Msg) ->
 
-%%     ForwardFn = fun(_, _) -> ok end,
+    lists:foreach(fun(VerPid) ->
+			  VerPid ! Msg
+		  end, VerPidList).
 
-%%     gen_server:start_link({local, potato_udp_name}, potato_udp, {Port, ForwardFn}, []),
+wait_for_message(Code) ->
+    receive 
+	Code ->
+	    ok
+    after 100 ->
+	    erlang:error(timeout)
+    end.
 
-%%     {VerifierArr, PrivateKey, _PublicKey} = make_verifier_array(5, NetAddress),
+wait_for_message(Code, Count) ->
+    lists:foreach(fun(_) -> wait_for_message(Code) end, lists:seq(1, Count)).
 
-%%     VerifierPid = start_pv(VerifierArr, PrivateKey, 0, potato_udp_name),
+one_udp_tick_test() ->
 
-%%     VerifierPid ! exit,
+    JsonFileName = "test/test_config_1_1_2.json",
 
-%%     gen_server:stop(potato_udp_name),
+    {ok, FileData} = file:read_file(JsonFileName),
 
-%%     ok.
+    JsonConf = jsx:decode(FileData, [return_maps]),
 
-%% udp_ver_start(NetAddress = {_IP, Port}, UdpServerName, ForwardFn, VerTot) ->
+    MyPid = self(),
+    ForwardFn = fun(Code, _Data) -> 
+			%% ?debugFmt("~p ~n ~p ~n", [Code, Data]),
+			MyPid ! Code 
+		end,
 
-%%     gen_server:start_link({local, UdpServerName}, potato_udp, {Port, ForwardFn}, []),
+    %% ForwardFn = fun(_, _) -> ok end,
 
-%%     {VerifierArr, PrivateKey, _PublicKey} = make_verifier_array(VerTot, NetAddress),
+    {_UdpIdList, VerifierPidList} = Data = start_from_json(JsonConf, ForwardFn),
 
-%%     VerPidList = lists:map(fun(VerNum) -> 
-%% 				   start_pv(VerifierArr, PrivateKey, VerNum, UdpServerName)
-%% 			   end, lists:seq(0, VerTot - 1)),
-    
-%%     {VerPidList, UdpServerName}.
-    
-%% udp_ver_stop({VerPidList, UdpServerName}) ->
+    wait_for_message(start, 3),
+    wait_for_message(add_node, 4),
 
-%%     lists:foreach(fun(VerPid) ->
-%% 			  VerPid ! exit
-%% 		  end, VerPidList),
+    broadcast(VerifierPidList, {timer_custom, 110}),
 
-%%     gen_server:stop(UdpServerName),
-%%     ok.
+    wait_for_message(send, 1),
+    wait_for_message(optimized_send, 3),
+    wait_for_message(udp, 3),
 
-%% broadcast(VerPidList, Msg) ->
+    stop_all(Data),
+    wait_for_message(terminate, 3),
 
-%%     lists:foreach(fun(VerPid) ->
-%% 			  VerPid ! Msg
-%% 		  end, VerPidList).
-
-%% wait_for_message(Code) ->
-%%     receive 
-%% 	Code ->
-%% 	    ok
-%%     after 100 ->
-%% 	    erlang:error(timeout)
-%%     end.
-
-%% wait_for_message(Code, Count) ->
-%%     lists:foreach(fun(_) -> wait_for_message(Code) end, lists:seq(1, Count)).
-
-%% one_udp_tick_test() ->
-
-%%     Port = 3144,
-%%     NetAddress = {"localhost", Port},
-
-%%     MyPid = self(),
-%%     ForwardFn = fun(Code, _Data) -> 
-%% 			%% ?debugFmt("~p ~p ~n", [Code, Data])
-%% 			MyPid ! Code 
-%% 		end,
-
-%%     %% ForwardFn = fun(_, _) -> ok end,
-
-%%     {VerPidList, _} = StateData = udp_ver_start(NetAddress, one_tick_udp_server, ForwardFn, 5),
-
-%%     wait_for_message(start),
-%%     wait_for_message(add_node, 5),
-
-%%     broadcast(VerPidList, {timer_custom, 110}),
-
-%%     wait_for_message(send),
-%%     wait_for_message(optimized_send),
-%%     wait_for_message(udp),
-
-%%     broadcast(VerPidList, {timer_custom, 120}),
-
-%%     wait_for_message(send),
-%%     wait_for_message(optimized_send),
-%%     wait_for_message(udp),
-
-%%     udp_ver_stop(StateData),
-
-%%     wait_for_message(terminate),
-
-%%     ok.
-    
+    ok.
