@@ -56,7 +56,7 @@ release_buffered_messages(MsgHandler) ->
 
 		    if IsDisconntected == false ->
 			    Pid = maps:get(DestAddress, MP),
-			    Pid ! {net, FromAddress, LastTimeTick, MsgId, MsgData};
+			    Pid ! {net_udp, {FromAddress, MsgId, MsgData}};
 		       true ->
 			    ok
 		    end
@@ -136,14 +136,19 @@ message_handler_loop(MsgHandler, Data = {OnExitFn}) ->
 	{timer_tick, CurrentTime} ->
 
 	    MsgFn = fun(Pid) -> 
-			    Pid ! {timer_custom, CurrentTime}
+			    Pid ! {custom_timer_tick, CurrentTime}
 		    end,
 
 	    lists:foreach(MsgFn, maps:values(MP)),
 	    
 	    NewMsgHandler = MsgHandler#message_handler{last_time_tick = CurrentTime};
 	exit ->
-	    lists:foreach( fun(Pid) -> Pid ! exit end, maps:values(MP)),
+	    lists:foreach( 
+	      fun(Pid) -> 
+		      Pid ! exit
+	      end, 
+	      maps:values(MP)),
+
 	    NewMsgHandler = exit;
 
 	_Any ->

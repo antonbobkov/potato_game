@@ -41,29 +41,43 @@ start_pv(VerifierArr, PrivateKey, VerifierIndex, MessageHandlerPid, _TrackerFn =
     PopManagerConfig = #pop_manager_config{
 			  request_range_backup = 3,
 
-			  %% fix,
-			  net_multi_send = fun(DestAddress, Id, Data) -> MessageHandlerPid ! {net, {MyAddress, DestAddress, Id, Data}} end,
+			  net_multi_send = 
+			      fun(DestAddressList, Id, Data) -> 
+				      lists:foreach(
+					fun(DestAddress) ->
+						MessageHandlerPid ! {net, {MyAddress, DestAddress, Id, Data}} 
+					end,
+					DestAddressList)
+			      end,
 
 			  on_new_block = undefined
 			 },
 
+    EventFn = fun(EventId, _Data) ->
+		      case EventId of 
+			  start ->
+			      OnStartFn({verifier, VerifierIndex});
+
+			  terminate ->
+			      OnExitFn();
+
+			  _Else ->
+			      ok
+		      end
+	      end,
+
     PopVerifierConfig = #pop_verifier_config{
 			   sub_time_out = 20,
 			   my_index = VerifierIndex,
-			   my_key = PrivateKey
+			   my_key = PrivateKey,
+
+			   event_fn = EventFn,
+			   timer_interval = none
 			  },
 
-    VerifierPid = spawn_link(fun() -> 
-				     OnStartFn({verifier, VerifierIndex}),
+    {ok, VerifierPid} = gen_server:start_link(pop_verifier, {explicit, PopChainConfig, PopManagerConfig, PopVerifierConfig}, []),
+    
 
-				     pop_verifier:start_loop( 
-				       PopChainConfig, 
-				       PopManagerConfig, 
-				       PopVerifierConfig, 
-				       no_timer, 
-				       OnExitFn
-				      )
-			     end),
 
     VerifierPid.
 
@@ -123,15 +137,15 @@ msg_handler_message_test() ->
 
     Pid ! {process_buffered_messages_no_reply, 100},
 
-    ?assertEqual({net, me_fr, 100, test_msg_1, test_data}, extract_message(100)),
-    ?assertEqual({net, me_fr, 100, test_msg_2, test_data}, extract_message(100)),
+    ?assertEqual({net_udp, {me_fr, test_msg_1, test_data}}, extract_message(100)),
+    ?assertEqual({net_udp, {me_fr, test_msg_2, test_data}}, extract_message(100)),
 
     ?assert(no_more_messages()),
 
     Pid ! exit,
 
-    ?assertEqual(exit, extract_message(100)),
-    ?assertEqual(exit, extract_message(100)),
+    extract_message(100), %% 2 exit messages
+    extract_message(100),
 
     ?assert(no_more_messages()),
 
@@ -148,7 +162,7 @@ verifier_start_up_test() ->
 
     VerifierPid = start_pv(VerifierArr, PrivateKey, 0, none, TrackingFn),
 
-    VerifierPid ! exit,
+    gen_server:stop(VerifierPid),
 
     ?assert(no_more_messages()),
 
@@ -357,20 +371,20 @@ output_one_message(Msg) ->
     end.
 													 
 
-output_messages(MessageHandlerPid) ->
-    timer:sleep(100),
+%% output_messages(MessageHandlerPid) ->
+%%     timer:sleep(100),
 
-    MessageHandlerPid ! {process_buffered_messages, self()},
+%%     MessageHandlerPid ! {process_buffered_messages, self()},
 
-    receive 
-	{msg_buffer, MsgList} ->
-	    lists:foreach(fun output_one_message/1, MsgList);
+%%     receive 
+%% 	{msg_buffer, MsgList} ->
+%% 	    lists:foreach(fun output_one_message/1, MsgList);
 
-	Else ->
-	    erlang:exit(Else)
-    after 100 ->
-	    erlang:exit(timeout)
-end.
+%% 	Else ->
+%% 	    erlang:exit(Else)
+%%     after 100 ->
+%% 	    erlang:exit(timeout)
+%%     end.
 
 disconnect_simulation_test() ->
     {_, MessageHandlerPid} = InitData = initialize_all(2),

@@ -84,10 +84,10 @@ get_current_time(State) ->
     end.
 
 json_get(Key, Map) when is_atom(Key) ->
-    maps:get(atom_to_binary(Key, utf8), Map);
+    maps:get(atom_to_binary(Key, utf8), Map).
 
-json_get(Key, Map) when is_list(Key) ->
-    maps:get(list_to_binary(Key), Map).
+%% json_get(Key, Map) when is_list(Key) ->
+%%     maps:get(list_to_binary(Key), Map).
 
 make_verifier_array_from_json(JsonConf) ->
     ChainId = json_get(chain_id, JsonConf),
@@ -272,6 +272,9 @@ handle_info(real_timer_tick, State) ->
     NewState = on_timer(CurrentTime, State),
 
     {noreply, NewState};
+
+handle_info(exit, State) ->
+    {stop, normal, State};
 
 handle_info({custom_timer_tick, CurrentTime}, State) ->
     ?assertEqual(undefined, State#pop_verifier.timer_ref),
