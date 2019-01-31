@@ -12,7 +12,6 @@ json_get(Key, Map) when is_list(Key) ->
     maps:get(list_to_binary(Key), Map).
 
 make_verifier_array(JsonConf) ->
-
     ChainId = json_get(chain_id, JsonConf),
     JsonVerifierConf = json_get(verifiers, JsonConf),
 
@@ -85,6 +84,10 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
     gen_server:cast({global, UdpServerId}, {add_node, MyNodeId, VerifierPid}),
 
     VerifierPid.
+
+fun(DestAddressList, MsgId, Data) -> 
+	gen_server:cast({global, UdpServerId}, {send, DestAddressList, {MyAddress, MsgId, Data} })
+end,
 
 start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
     {_Ip, Port} = ServerAddress,

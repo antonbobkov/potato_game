@@ -11,7 +11,6 @@
 -record(pop_chain, {pop_config_data, tree_data, head_block, genisys_block}).
 
 -record(pop_manager_config, {request_range_backup, 
-			     net_send, 
 			     net_multi_send, 
 			     on_new_block}).
 
