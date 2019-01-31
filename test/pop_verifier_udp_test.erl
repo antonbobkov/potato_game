@@ -57,7 +57,7 @@ start_pv(VerifierArr, PrivateKey, VerifierIndex, UdpServerId) ->
 			   event_fn = fun(_, _) -> ok end
 			  },
 
-    InitData = {PopChainConfig, PopManagerConfig, PopVerifierConfig},
+    InitData = {explicit, PopChainConfig, PopManagerConfig, PopVerifierConfig},
     
     
     {ok, VerifierPid} = gen_server:start_link(pop_verifier, InitData, []),

@@ -1,7 +1,10 @@
 -module(pop_verifier).
 -behavior(gen_server).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([
+	 init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2,
+	 make_verifier_array_from_json/1
+	]).
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("stdlib/include/assert.hrl").
@@ -110,20 +113,24 @@ make_verifier_array_from_json(JsonConf) ->
 
     VerifierArr.
 
-create_config_from_json(JsonConf, NetSendFn, EventFn) ->
+create_config_from_json(JsonConf, _ConfigData = {MyIndex, NetSendFn, EventFn, ConfPrivateKey}) ->
 
     VerifierArr = make_verifier_array_from_json(JsonConf),
 
-    MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
+    %% MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
 
-    {_NetworkAddress, MyNodeId} = MyAddress,
+    %% {_NetworkAddress, MyNodeId} = MyAddress,
 
-    JsonVerifierConf = json_get(verifiers, JsonConf),
-    MyConf = array:get(MyIndex, array:from_list(JsonVerifierConf)),
-    PrivateKeyFile = json_get(private_key, MyConf),
-    PrivateKey = my_crypto:read_file_key(private, PrivateKeyFile),
+    if ConfPrivateKey == default ->
+	    JsonVerifierConf = json_get(verifiers, JsonConf),
+	    MyConf = array:get(MyIndex, array:from_list(JsonVerifierConf)),
+	    PrivateKeyFile = json_get(private_key, MyConf),
+	    PrivateKey = my_crypto:read_file_key(private, PrivateKeyFile);
+       true ->
+	    PrivateKey = ConfPrivateKey
+    end,
 
-    TimerInterval = json_get(timer_tick_interval_sec, MyConf),
+    TimerInterval = json_get(timer_tick_interval_sec, JsonConf),
 
     if is_integer(TimerInterval) ->
 	    TimerIntervalFinal = TimerInterval;
@@ -132,7 +139,7 @@ create_config_from_json(JsonConf, NetSendFn, EventFn) ->
 	    TimerIntervalFinal = none;
 
        true ->
-	    erlang:error(timer_interval_bad_value, [TimerInterval])
+	    TimerIntervalFinal = erlang:error(timer_interval_bad_value, [TimerInterval])
     end,
 
     PopChainConfig = #pop_config_data{
@@ -159,24 +166,20 @@ create_config_from_json(JsonConf, NetSendFn, EventFn) ->
 			   timer_interval = TimerIntervalFinal
 			  },
     
-    {PopConfigData, PopManagerConfig, PopVerConfig}.
+    {PopChainConfig, PopManagerConfig, PopVerifierConfig}.
     
-init(InitData = {json_file, JsonFilePath, NetSendFn, EventFn}) ->
+init({json_file, JsonFilePath, ConfigData}) ->
 
     {ok, FileData} = file:read_file(JsonFilePath),
 
     JsonConf = jsx:decode(FileData, [return_maps]),
 
-    make_event(start, InitData, State),
+    init({json_map, JsonConf, ConfigData});
 
-    init({json, JsonConf, NetSendFn, EventFn});
+init({json_map, JsonConf, ConfigData}) ->
+    {PopConfigData, PopManagerConfig, PopVerConfig} = create_config_from_json(JsonConf, ConfigData),
 
-init(InitData = {json_map, JsonConf, NetSendFn, EventFn}) ->
-    {PopConfigData, PopManagerConfig, PopVerConfig} = create_config_from_json(JsonConf, NetSendFn, EventFn),
-
-    make_event(start, InitData, State),
-
-    init({explicit, PopConfigData, PopManagerConfig, NewPopVerConfig});
+    init({explicit, PopConfigData, PopManagerConfig, PopVerConfig});
     
 
 init(InitData = {explicit, PopConfigData, PopManagerConfig, PopVerConfig}) ->

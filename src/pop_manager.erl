@@ -13,7 +13,7 @@
 
 -export([
 	 new/2,
-	 on_net_message/5,
+	 on_net_message/5
 	 %% fn_convert_to_multi_address
 	]).
 
@@ -223,20 +223,20 @@ add_block_any_order(Block, CurrentTime, PopManager) ->
 %% @doc Receive hashes, request unknown blocks.
 
 on_net_message(SenderAddress, _, send_block_hashes, HashList, PopManager) ->
-    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_multi_send,
 
     FilterFn = fun (Hash) -> get_block_status(Hash, PopManager) == unknown end,
 
     UnknownHashList = lists:filter(FilterFn, HashList),
 
-    NetSendFn(SenderAddress, request_full_blocks, UnknownHashList),
+    NetSendFn([SenderAddress], request_full_blocks, UnknownHashList),
 
     PopManager;
 
 %% @doc Receive blocks, add them to the structure.
 
 on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, PopManager) ->
-    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_multi_send,
 
     FoldFn = 
 	fun(Block, PM) ->
@@ -245,7 +245,7 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 		PrevBlockStatus = get_block_status(PrevHash, PM),
 
 		if (Age == new) and (PrevBlockStatus /= in_chain) ->
-			NetSendFn(SenderAddress, request_block_hash_range, setup_range_request(PrevHash, PM));
+			NetSendFn([SenderAddress], request_block_hash_range, setup_range_request(PrevHash, PM));
 		   true -> ok
 		end,
 		
@@ -259,7 +259,7 @@ on_net_message(SenderAddress, CurrentTime, send_full_blocks, {Age, BlockList}, P
 %% @doc Respond to hash range request by computing and sending the range.
 
 on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHash2, UnknownHash}, PopManager) ->
-    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_multi_send,
 
     St1 = get_block_status(KnownHash1, PopManager),
     St2 = get_block_status(KnownHash2, PopManager),
@@ -275,7 +275,7 @@ on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHas
 
     RequestHashList = compute_block_hash_range(UnknownHash, KnownHash, PopManager),
 
-    NetSendFn(SenderAddress, send_block_hashes, RequestHashList),
+    NetSendFn([SenderAddress], send_block_hashes, RequestHashList),
 
     PopManager;
 
@@ -283,13 +283,13 @@ on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHas
 
 on_net_message(SenderAddress, _, request_full_blocks, HashList, PopManager) ->
     PC = PopManager#pop_manager.pop_chain,
-    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_send,
+    NetSendFn = PopManager#pop_manager.config#pop_manager_config.net_multi_send,
 
     MapFn = fun (Hash) ->
 		    R1 = pop_chain:find_block_by_id(Hash, PC),
 		    case R1 of
 			{ok, Block} ->
-			    NetSendFn(SenderAddress, send_full_blocks, {old, [Block]});
+			    NetSendFn([SenderAddress], send_full_blocks, {old, [Block]});
 			error ->
 			    debug_only:error("unexpected request_full_blocks, unknown hash")
 		    end,

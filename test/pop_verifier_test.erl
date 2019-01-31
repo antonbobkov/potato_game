@@ -41,7 +41,8 @@ start_pv(VerifierArr, PrivateKey, VerifierIndex, MessageHandlerPid, _TrackerFn =
     PopManagerConfig = #pop_manager_config{
 			  request_range_backup = 3,
 
-			  net_send = fun(DestAddress, Id, Data) -> MessageHandlerPid ! {net, {MyAddress, DestAddress, Id, Data}} end,
+			  %% fix,
+			  net_multi_send = fun(DestAddress, Id, Data) -> MessageHandlerPid ! {net, {MyAddress, DestAddress, Id, Data}} end,
 
 			  on_new_block = undefined
 			 },

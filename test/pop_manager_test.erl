@@ -35,7 +35,14 @@ make_pm() ->
 			  request_range_backup = 3,
 
 			  %% send message to PiD in Address via !
-			  net_send = fun(Address, Id, Data) -> Address ! {net, Id, Data} end,
+			  net_multi_send = 
+			      fun(AddressList, Id, Data) -> 
+				      lists:foreach(
+					fun(Address) ->
+					  Address ! {net, Id, Data}
+					end,
+					AddressList)
+			      end,
 
 
 			  %% when new block is added send its hash message to itself 
