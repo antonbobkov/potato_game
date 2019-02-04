@@ -1,6 +1,7 @@
 
 [![Build Status](https://travis-ci.org/antonbobkov/potato_game.svg?branch=master)](https://travis-ci.org/antonbobkov/potato_game)
 [![codecov](https://codecov.io/gh/antonbobkov/potato_game/branch/master/graph/badge.svg)](https://codecov.io/gh/antonbobkov/potato_game)
+![](https://img.shields.io/github/last-commit/antonbobkov/potato_game.svg?style=flat)
 
 # Potato Game
 
