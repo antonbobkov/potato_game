@@ -1,4 +1,4 @@
 #/bin/bash
 
-rm -rf _build
+rm -rf _build/test/
 rebar3 eunit
