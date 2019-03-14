@@ -20,11 +20,11 @@ start() ->
 				   {port,8081}, 
 				   {server_name,"helloworld"}, 
 				   {server_root,"."}, 
-				   {document_root,"."}, 
+				   {document_root,"./www"}, 
 				   {erl_script_alias, {"/erl", [hello_web]}}, 
-				   {error_log, "error.log"}, 
-				   {security_log, "security.log"}, 
-				   {transfer_log, "transfer.log"}, 
+				   {error_log, "./www/error.log"}, 
+				   {security_log, "./www/security.log"}, 
+				   {transfer_log, "./www/transfer.log"}, 
 
 				   {mime_types,[ 
 						 {"html","text/html"}, {"css","text/css"}, {"js","application/x-javascript"} ]} 
@@ -33,6 +33,7 @@ start() ->
     io:format("started ~n", []),
     ok. 
          
-service(SessionID, _Env, _Input) -> 
+service(SessionID, Env, Input) -> 
     io:format("service ~n", []),
-    mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n<body>\nHello, World!\n</body>\n</html>" ]).
+    Inp = io_lib:format("~nSession: ~p ~n~n Env: ~p ~n~n Inp: ~p ~n ~n", [SessionID, Env, Input]),
+    mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n<body>\nHello, World!\n</body> <pre>" ++ Inp ++ "</pre>\n</html>" ]).
