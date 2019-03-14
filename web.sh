@@ -1,1 +1,1 @@
-erl -pa _build/default/lib/potatoserver/ebin/ -noshell -s test_sws start
+erl -pa _build/default/lib/potatoserver/ebin/ -noshell -detached -s test_sws start
