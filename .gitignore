@@ -32,3 +32,5 @@ _build
 rebar3.crashdump
 .DS_Store
 eunit.coverdata
+web_files/www/*.log
+web_files/www/icons
