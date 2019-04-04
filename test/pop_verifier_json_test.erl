@@ -5,14 +5,14 @@
 
 -include("potato_records.hrl").
 
-start_pv(VerifierArr, JsonConf, MyIndex, UdpServerGlobalName, GlobalClusterName) ->
+start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
     MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
 
     {_NetworkAddress, MyNodeId} = MyAddress,
 
     NetSendFn = fun(DestAddressList, MsgId, Data) -> 
-			gen_server:cast({global, UdpServerGlobalName}, {send, DestAddressList, {MyAddress, MsgId, Data} })
+			gen_server:cast({global, UdpServerId}, {send, DestAddressList, {MyAddress, MsgId, Data} })
 		end,
 
     EventFn = fun(_,_) -> ok end,
@@ -20,18 +20,16 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerGlobalName, GlobalClusterName)
 
     ConfigData = {MyIndex, NetSendFn, EventFn, ConfPrivateKey},
 
-    VerifierGlobalName = {GlobalClusterName, verifier, MyIndex},
+    {ok, VerifierPid} = gen_server:start_link(pop_verifier, {json_map, JsonConf, ConfigData}, []),
 
-    {ok, VerifierPid} = gen_server:start_link({global, VerifierGlobalName}, pop_verifier, {json_map, JsonConf, ConfigData}, []),
-
-    gen_server:cast({global, UdpServerGlobalName}, {add_node, MyNodeId, VerifierPid}),
+    gen_server:cast({global, UdpServerId}, {add_node, MyNodeId, VerifierPid}),
 
     VerifierPid.
 
-start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerGlobalName, ForwardFn) ->
+start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
     {_Ip, Port} = ServerAddress,
 
-    {ok, _} = gen_server:start_link({global, UdpServerGlobalName}, potato_udp, {Port, ForwardFn}, []),
+    gen_server:start_link({global, UdpServerId}, potato_udp, {Port, ForwardFn}, []),
 
     VerList = lists:filter(
 		fun(VerData) ->
@@ -48,12 +46,12 @@ start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerGlobalName, 
 
     PidList = lists:map(
 		fun(VerIndex) ->
-			start_pv(VerifierArr, JsonConf, VerIndex, UdpServerGlobalName)
+			start_pv(VerifierArr, JsonConf, VerIndex, UdpServerId)
 		end, 
 		IndexList),
     PidList.
 
-start_from_json(JsonConf, ForwardFn, GlobalClusterName) ->
+start_from_json(JsonConf, ForwardFn) ->
     VerifierArr = pop_verifier:make_verifier_array_from_json(JsonConf),
 
     VerAddressList = lists:map(
@@ -67,9 +65,9 @@ start_from_json(JsonConf, ForwardFn, GlobalClusterName) ->
 
     ProcessData = lists:map(
 		    fun(Address) ->
-			    UdpServerGlobalName = {GlobalClusterName, udp_server, Address},
-			    PidList = start_server_cluster(VerifierArr, JsonConf, Address, UdpServerGlobalName, ForwardFn),
-			    {UdpServerGlobalName, PidList}
+			    UdpServerId = {udp_server, Address},
+			    PidList = start_server_cluster(VerifierArr, JsonConf, Address, UdpServerId, ForwardFn),
+			    {UdpServerId, PidList}
 		    end, 
 		    VerAddressUniqueList),
 
