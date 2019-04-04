@@ -82,12 +82,12 @@ start_cluster_from_json(JsonConf, ForwardFn) ->
 
     {UdpServerIdList, lists:flatten(VerifierIdList)}.
     
-stop_cluster({UdpIdList, VerifierIdList}) ->
+stop_cluster({UdpServerIdList, VerifierIdList}) ->
     lists:foreach(
       fun(UdpId) ->
 	      gen_server:stop({global, UdpId})
       end,
-      UdpIdList),
+      UdpServerIdList),
 
     lists:foreach(
       fun(Id) ->
