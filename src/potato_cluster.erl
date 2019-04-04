@@ -1,11 +1,18 @@
--module(pop_verifier_json_test).
+-module(potato_cluster).
 
--include_lib("eunit/include/eunit.hrl").
+-export([
+	 start_one_pop_verifier/4,
+	 start_single_server_cluster/5,
+	 start_cluster_from_json/2,
+	 stop_cluster/1
+	]).
+
 -include_lib("stdlib/include/assert.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -include("potato_records.hrl").
 
-start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
+start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
     MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
 
@@ -26,7 +33,7 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
     MyNodeNetId.
 
-start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
+start_single_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
     {_Ip, Port} = ServerAddress,
 
     gen_server:start_link({global, UdpServerId}, potato_udp, {Port, ForwardFn}, []),
@@ -46,12 +53,12 @@ start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardF
 
     IdList = lists:map(
 		fun(VerIndex) ->
-			start_pv(VerifierArr, JsonConf, VerIndex, UdpServerId)
+			start_one_pop_verifier(VerifierArr, JsonConf, VerIndex, UdpServerId)
 		end, 
 		IndexList),
     IdList.
 
-start_from_json(JsonConf, ForwardFn) ->
+start_cluster_from_json(JsonConf, ForwardFn) ->
     VerifierArr = pop_verifier:make_verifier_array_from_json(JsonConf),
 
     VerAddressList = lists:map(
@@ -66,7 +73,7 @@ start_from_json(JsonConf, ForwardFn) ->
     ProcessData = lists:map(
 		    fun(Address) ->
 			    UdpServerId = {udp_server, Address},
-			    IdList = start_server_cluster(VerifierArr, JsonConf, Address, UdpServerId, ForwardFn),
+			    IdList = start_single_server_cluster(VerifierArr, JsonConf, Address, UdpServerId, ForwardFn),
 			    {UdpServerId, IdList}
 		    end, 
 		    VerAddressUniqueList),
@@ -75,87 +82,17 @@ start_from_json(JsonConf, ForwardFn) ->
 
     {UdpServerIdList, lists:flatten(VerifierIdList)}.
     
-stop_all({UdpIdList, VerifierIdList}) ->
-    ?debugVal(UdpIdList),
-
+stop_cluster({UdpIdList, VerifierIdList}) ->
     lists:foreach(
       fun(UdpId) ->
 	      gen_server:stop({global, UdpId})
       end,
       UdpIdList),
 
-    ?debugVal(VerifierIdList),
-
     lists:foreach(
       fun(Id) ->
 	      gen_server:stop({global, Id})
       end,
       VerifierIdList),
-
-    ok.
-
-start_stop_test() ->
-    JsonFileName = "test/test_config_3.json",
-
-    {ok, FileData} = file:read_file(JsonFileName),
-
-    JsonConf = jsx:decode(FileData, [return_maps]),
-
-    ForwardFn = fun(_, _) -> ok end,
-
-    Data = start_from_json(JsonConf, ForwardFn),
-
-    stop_all(Data),
-
-    ok.
-    
-
-
-broadcast(VerIdList, Msg) ->
-
-    lists:foreach(fun(VerId) ->
-			  gen_server:cast({global, VerId}, Msg)
-		  end, VerIdList).
-
-wait_for_message(Code) ->
-    receive 
-	Code ->
-	    ok
-    after 100 ->
-	    erlang:error(timeout)
-    end.
-
-wait_for_message(Code, Count) ->
-    lists:foreach(fun(_) -> wait_for_message(Code) end, lists:seq(1, Count)).
-
-one_udp_tick_test() ->
-
-    JsonFileName = "test/test_config_1_1_2.json",
-
-    {ok, FileData} = file:read_file(JsonFileName),
-
-    JsonConf = jsx:decode(FileData, [return_maps]),
-
-    MyPid = self(),
-    ForwardFn = fun(Code, _Data) -> 
-			%% ?debugFmt("~p ~n ~p ~n", [Code, Data]),
-			MyPid ! Code 
-		end,
-
-    %% ForwardFn = fun(_, _) -> ok end,
-
-    {_UdpIdList, VerifierIdList} = Data = start_from_json(JsonConf, ForwardFn),
-
-    wait_for_message(start, 3),
-    wait_for_message(add_node, 4),
-
-    broadcast(VerifierIdList, {custom_timer_tick, 110}),
-
-    wait_for_message(send, 1),
-    wait_for_message(optimized_send, 3),
-    wait_for_message(udp, 3),
-
-    stop_all(Data),
-    wait_for_message(terminate, 3),
 
     ok.
