@@ -9,7 +9,7 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
     MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
 
-    {_NetworkAddress, MyNodeId} = MyAddress,
+    {_NetworkAddress, MyNodeNetId} = MyAddress,
 
     NetSendFn = fun(DestAddressList, MsgId, Data) -> 
 			gen_server:cast({global, UdpServerId}, {send, DestAddressList, {MyAddress, MsgId, Data} })
@@ -20,11 +20,11 @@ start_pv(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
     ConfigData = {MyIndex, NetSendFn, EventFn, ConfPrivateKey},
 
-    {ok, VerifierPid} = gen_server:start_link(pop_verifier, {json_map, JsonConf, ConfigData}, []),
+    gen_server:start_link({global, MyNodeNetId}, pop_verifier, {json_map, JsonConf, ConfigData}, []),
 
-    gen_server:cast({global, UdpServerId}, {add_node, MyNodeId, VerifierPid}),
+    gen_server:cast({global, UdpServerId}, {add_node, MyNodeNetId, {global, MyNodeNetId}}),
 
-    VerifierPid.
+    MyNodeNetId.
 
 start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardFn) ->
     {_Ip, Port} = ServerAddress,
@@ -44,12 +44,12 @@ start_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, ForwardF
 		  end,
 		  VerList),
 
-    PidList = lists:map(
+    IdList = lists:map(
 		fun(VerIndex) ->
 			start_pv(VerifierArr, JsonConf, VerIndex, UdpServerId)
 		end, 
 		IndexList),
-    PidList.
+    IdList.
 
 start_from_json(JsonConf, ForwardFn) ->
     VerifierArr = pop_verifier:make_verifier_array_from_json(JsonConf),
@@ -66,27 +66,31 @@ start_from_json(JsonConf, ForwardFn) ->
     ProcessData = lists:map(
 		    fun(Address) ->
 			    UdpServerId = {udp_server, Address},
-			    PidList = start_server_cluster(VerifierArr, JsonConf, Address, UdpServerId, ForwardFn),
-			    {UdpServerId, PidList}
+			    IdList = start_server_cluster(VerifierArr, JsonConf, Address, UdpServerId, ForwardFn),
+			    {UdpServerId, IdList}
 		    end, 
 		    VerAddressUniqueList),
 
-    {UdpIdList, VerifierPidList} = lists:unzip(ProcessData),
+    {UdpServerIdList, VerifierIdList} = lists:unzip(ProcessData),
 
-    {UdpIdList, lists:flatten(VerifierPidList)}.
+    {UdpServerIdList, lists:flatten(VerifierIdList)}.
     
-stop_all({UdpIdList, VerifierPidList}) ->
+stop_all({UdpIdList, VerifierIdList}) ->
+    ?debugVal(UdpIdList),
+
     lists:foreach(
       fun(UdpId) ->
 	      gen_server:stop({global, UdpId})
       end,
       UdpIdList),
 
+    ?debugVal(VerifierIdList),
+
     lists:foreach(
-      fun(Pid) ->
-	      gen_server:stop(Pid)
+      fun(Id) ->
+	      gen_server:stop({global, Id})
       end,
-      VerifierPidList),
+      VerifierIdList),
 
     ok.
 
@@ -107,11 +111,11 @@ start_stop_test() ->
     
 
 
-broadcast(VerPidList, Msg) ->
+broadcast(VerIdList, Msg) ->
 
-    lists:foreach(fun(VerPid) ->
-			  VerPid ! Msg
-		  end, VerPidList).
+    lists:foreach(fun(VerId) ->
+			  gen_server:cast({global, VerId}, Msg)
+		  end, VerIdList).
 
 wait_for_message(Code) ->
     receive 
@@ -140,12 +144,12 @@ one_udp_tick_test() ->
 
     %% ForwardFn = fun(_, _) -> ok end,
 
-    {_UdpIdList, VerifierPidList} = Data = start_from_json(JsonConf, ForwardFn),
+    {_UdpIdList, VerifierIdList} = Data = start_from_json(JsonConf, ForwardFn),
 
     wait_for_message(start, 3),
     wait_for_message(add_node, 4),
 
-    broadcast(VerifierPidList, {custom_timer_tick, 110}),
+    broadcast(VerifierIdList, {custom_timer_tick, 110}),
 
     wait_for_message(send, 1),
     wait_for_message(optimized_send, 3),

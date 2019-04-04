@@ -72,11 +72,11 @@ handle_call(E, From, S) ->
 	   | {send, [node_address()], any()}.
 
 %% add a node_id => Pid to map
-handle_cast({add_node, NodeId, Pid}, State) ->
+handle_cast({add_node, NodeId, NodeLocation}, State) ->
 
-    make_event(add_node, {NodeId, Pid}, State),
+    make_event(add_node, {NodeId, NodeLocation}, State),
     
-    NodeMap2 = maps:put(NodeId, Pid, State#udp_state.node_map),
+    NodeMap2 = maps:put(NodeId, NodeLocation, State#udp_state.node_map),
     {noreply, State#udp_state{node_map = NodeMap2}};
 
 
@@ -129,8 +129,13 @@ handle_info(_NetData = {udp, Socket, IP, InPortNo, Packet}, State = #udp_state{n
     make_event(udp, {Socket, IP, InPortNo, NodeList, Msg}, State),
 
     ForwardFn = fun(NodeId) ->
-			 NodePid = maps:get(NodeId, NodeMap),
-			 NodePid ! {net_udp, Msg}
+			NodeLocation = maps:get(NodeId, NodeMap),
+			case NodeLocation of
+			    {global, NodeName} ->
+				gen_server:cast({global, NodeName}, {net_udp, Msg});
+			    NodePid ->
+				NodePid ! {net_udp, Msg}
+			end
 		 end,
 
     lists:foreach(ForwardFn, NodeList),
