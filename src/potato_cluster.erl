@@ -1,16 +1,22 @@
 -module(potato_cluster).
 
 -export([
+	 hi/0,
 	 start_one_pop_verifier/4,
 	 start_single_server_cluster/5,
 	 start_cluster_from_json/2,
-	 stop_cluster/1
+	 stop_cluster/1,
+	 start_web_cluster/1
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -include("potato_records.hrl").
+
+hi() ->
+    ?debugFmt("hi", []),
+    ok.
 
 start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId) ->
 
@@ -58,7 +64,65 @@ start_single_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, F
 		IndexList),
     IdList.
 
+json_find(Key, Map) when is_atom(Key) ->
+    maps:find(atom_to_binary(Key, utf8), Map).
+
+json_get(Key, Map) when is_atom(Key) ->
+    maps:get(atom_to_binary(Key, utf8), Map).
+
+format_message(Code, _Data) ->
+    io_lib:format("~p ~n", [Code]).
+
+start_web_cluster([JsonFileName, LogModeStr]) ->
+
+    ?debugFmt("~p ~n ~p ~n", [JsonFileName, LogModeStr]),
+
+    LogMode = LogModeStr,
+
+    {ok, FileData} = file:read_file(JsonFileName),
+
+    JsonConf = jsx:decode(FileData, [return_maps]),
+
+    LogFile = 
+	case json_find(log_file, JsonConf) of
+	    {ok, <<"none">>} ->
+		no_log_file;
+	    {ok, FileName} ->
+		FileName;
+	    error ->
+		no_log_file
+	end,
+
+    case json_find(web, JsonConf) of
+	{ok, <<"none">>} ->
+	    no_web;
+	{ok, JsonWebConf} ->
+	    WebPort = json_get(web_port, JsonWebConf),
+	    potato_cluster_web_server:start(WebPort),
+	    ok;
+	error ->
+	    no_web
+    end,
+
+    ForwardFn = 
+	case LogMode of 
+	    no_logs ->
+		fun(_, _) -> ok end;
+	    console_logs ->
+		fun(Code, Data) -> io:format(format_message(Code, Data)) end;
+	    file_logs ->
+		fun(Code, Data) -> 
+			?assertNotEqual(LogFile, no_log_file),
+			file:write_file(LogFile, format_message(Code, Data), [append])
+		end
+	end,		   
+
+    start_cluster_from_json(JsonConf, ForwardFn),
+
+    ok.
+
 start_cluster_from_json(JsonConf, ForwardFn) ->
+    
     VerifierArr = pop_verifier:make_verifier_array_from_json(JsonConf),
 
     VerAddressList = lists:map(
