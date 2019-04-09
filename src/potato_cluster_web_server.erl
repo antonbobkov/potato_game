@@ -1,12 +1,12 @@
 -module(potato_cluster_web_server). 
 
 -export([
-	 start/1,
+	 start/3,
 	 stop/1,
 	 service/3
 	]). 
 
-start(Port) ->
+start(Port, LogsDir, DocDir) ->
     ok = inets:start(),
     {ok, Reference} = 
 	inets:start(httpd, [ 
@@ -27,11 +27,11 @@ start(Port) ->
 			     {port, Port}, 
 			     {server_name, "potato_web_server_name"}, 
 			     {server_root, "."}, 
-			     {document_root, "./www"}, 
+			     {document_root, DocDir}, 
 			     {erl_script_alias, {"/erl", [potato_cluster_web_server]}}, 
-			     {error_log, "./www/error.log"}, 
-			     {security_log, "./www/security.log"}, 
-			     {transfer_log, "./www/transfer.log"}, 
+			     {error_log, LogsDir ++ "/error.log"}, 
+			     {security_log, LogsDir ++ "/security.log"}, 
+			     {transfer_log, LogsDir ++ "/transfer.log"}, 
 
 			     {mime_types,[ 
 					   {"html","text/html"}, 

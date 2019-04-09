@@ -59,6 +59,8 @@ on_timer(CurrentTime, PV0) ->
 
 	    NewBlock = pop_chain:apply_block_signature(my_crypto:sign(maps:get(this_id, NewBlockUnsigned), PrivateKey), NewBlockUnsigned),
 
+	    make_event(new_block_created, NewBlock, PV0),
+
 	    emit_net_message(verifiers, send_full_blocks, {new, [NewBlock]}, PV1),
 
 	    ok;
@@ -86,16 +88,19 @@ get_current_time(State) ->
 json_get(Key, Map) when is_atom(Key) ->
     maps:get(atom_to_binary(Key, utf8), Map).
 
+json_get_str(Key, Map) when is_atom(Key) ->
+    binary_to_list(maps:get(atom_to_binary(Key, utf8), Map)).
+
 %% json_get(Key, Map) when is_list(Key) ->
 %%     maps:get(list_to_binary(Key), Map).
 
 make_verifier_array_from_json(JsonConf) ->
-    ChainId = json_get(chain_id, JsonConf),
+    ChainId = json_get_str(chain_id, JsonConf),
     JsonVerifierConf = json_get(verifiers, JsonConf),
 
     VerFunc = 
 	fun(Index, VerConf) -> 
-		PublicKeyFile = json_get(public_key, VerConf),
+		PublicKeyFile = json_get_str(public_key, VerConf),
 
 		Ip = binary_to_list(json_get(ip, VerConf)),
 		Port = json_get(port, VerConf),
@@ -124,7 +129,7 @@ create_config_from_json(JsonConf, _ConfigData = {MyIndex, NetSendFn, EventFn, Co
     if ConfPrivateKey == default ->
 	    JsonVerifierConf = json_get(verifiers, JsonConf),
 	    MyConf = array:get(MyIndex, array:from_list(JsonVerifierConf)),
-	    PrivateKeyFile = json_get(private_key, MyConf),
+	    PrivateKeyFile = json_get_str(private_key, MyConf),
 	    PrivateKey = my_crypto:read_file_key(private, PrivateKeyFile);
        true ->
 	    PrivateKey = ConfPrivateKey
@@ -145,7 +150,7 @@ create_config_from_json(JsonConf, _ConfigData = {MyIndex, NetSendFn, EventFn, Co
     PopChainConfig = #pop_config_data{
 		   time_between_blocks = json_get(time_between_blocks_sec, JsonConf), 
 		   time_desync_margin = json_get(timestamp_tolerable_error_sec, JsonConf), 
-		   chain_id = json_get(chain_id, JsonConf), 
+		   chain_id = json_get_str(chain_id, JsonConf), 
 		   verifiers_arr = VerifierArr, 
 		   init_time = json_get(genesis_block_timestamp_sec, JsonConf)
 		  },

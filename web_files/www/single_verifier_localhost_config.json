@@ -24,8 +24,11 @@
     ],
 
     "log_file" : "./www/potato_event.log",
+    "block_log_file" : "./www/blocks.log",
     
     "web" : {
-	"web_port" : 8081
+	"port" : 8081,
+	"logs_dir" : "./www/web_logs/",
+	"file_dir" : "./www"
     }
 }

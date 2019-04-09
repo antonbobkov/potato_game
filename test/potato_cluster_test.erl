@@ -13,7 +13,7 @@ start_stop_test() ->
 
     JsonConf = jsx:decode(FileData, [return_maps]),
 
-    ForwardFn = fun(_, _) -> ok end,
+    ForwardFn = fun(_, _, _) -> ok end,
 
     Data = potato_cluster:start_cluster_from_json(JsonConf, ForwardFn),
 
@@ -49,7 +49,7 @@ one_udp_tick_test() ->
     JsonConf = jsx:decode(FileData, [return_maps]),
 
     MyPid = self(),
-    ForwardFn = fun(Code, _Data) -> 
+    ForwardFn = fun(_, Code, _Data) -> 
 			%% ?debugFmt("~p ~n ~p ~n", [Code, Data]),
 			MyPid ! Code 
 		end,

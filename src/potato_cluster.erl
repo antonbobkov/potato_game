@@ -1,7 +1,6 @@
 -module(potato_cluster).
 
 -export([
-	 hi/0,
 	 start_one_pop_verifier/5,
 	 start_single_server_cluster/5,
 	 start_cluster_from_json/2,
@@ -20,12 +19,11 @@ json_find(Key, Map) when is_atom(Key) ->
 json_get(Key, Map) when is_atom(Key) ->
     maps:get(atom_to_binary(Key, utf8), Map).
 
+json_get_str(Key, Map) when is_atom(Key) ->
+    binary_to_list(maps:get(atom_to_binary(Key, utf8), Map)).
+
 json_put(Key, Value, Map) when is_atom(Key) ->
     maps:put(atom_to_binary(Key, utf8), Value, Map).
-
-hi() ->
-    ?debugFmt("hi", []),
-    ok.
 
 start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId, OnEventFn) ->
 
@@ -39,7 +37,9 @@ start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId, OnEventFn) -
 
     ConfPrivateKey = default,
 
-    ConfigData = {MyIndex, NetSendFn, OnEventFn, ConfPrivateKey},
+    VerifierOnEventFn = fun(Code, Data) -> OnEventFn(MyNodeNetId, Code, Data) end,
+
+    ConfigData = {MyIndex, NetSendFn, VerifierOnEventFn, ConfPrivateKey},
 
     gen_server:start_link({global, MyNodeNetId}, pop_verifier, {json_map, JsonConf, ConfigData}, []),
 
@@ -50,7 +50,9 @@ start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId, OnEventFn) -
 start_single_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, OnEventFn) ->
     {_Ip, Port} = ServerAddress,
 
-    gen_server:start_link({global, UdpServerId}, potato_udp, {Port, OnEventFn}, []),
+    UdpOnEventFn = fun(Code, Data) -> OnEventFn(UdpServerId, Code, Data) end,
+
+    gen_server:start_link({global, UdpServerId}, potato_udp, {Port, UdpOnEventFn}, []),
 
     VerList = lists:filter(
 		fun(VerData) ->
@@ -127,10 +129,31 @@ stop_cluster({UdpServerIdList, VerifierIdList}) ->
     ok.
 
 
-format_message(Code, Data) ->
-    io_lib:format("~p ~n ~p ~n ~n", [Code, Data]).
+format_message(full, Source, Code, Data) ->
+    io_lib:format("~p ~p ~n ~p ~n ~n", [Source, Code, Data]);
 
-start_web_cluster([JsonFileName, LogModeStr]) ->
+format_message(code, Source, Code, _Data) ->
+    io_lib:format("~p ~n ~p ~n ~n", [Source, Code]).
+
+block_chain_output(Source, Code = new_block_created, Block, BlockLogFile) ->
+    file:write_file(BlockLogFile, format_message(full, Source, Code, Block), [append]);
+
+block_chain_output(_, _, _, _) ->
+    ok.
+
+
+start_web_cluster(Args) ->
+    try
+	start_web_cluster_inner(Args)
+    catch
+	_:Err ->
+	    Stacktrace = erlang:get_stacktrace(),
+	    ?debugFmt("~p ~n ~p ~n", [Err, Stacktrace]),
+	    erlang:error("can't start")
+    end.
+
+ 
+start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 
     %% ?debugFmt("~p ~n ~p ~n", [JsonFileName, LogModeStr]),
 
@@ -144,8 +167,12 @@ start_web_cluster([JsonFileName, LogModeStr]) ->
 	{ok, <<"none">>} ->
 	    no_web;
 	{ok, JsonWebConf} ->
-	    WebPort = json_get(web_port, JsonWebConf),
-	    potato_cluster_web_server:start(WebPort),
+
+	    WebPort = json_get(port, JsonWebConf),
+	    WebLogsDir = json_get_str(logs_dir, JsonWebConf),
+	    WebFileDir = json_get_str(file_dir, JsonWebConf),
+
+	    potato_cluster_web_server:start(WebPort, WebLogsDir, WebFileDir),
 	    ok;
 	error ->
 	    no_web
@@ -153,16 +180,37 @@ start_web_cluster([JsonFileName, LogModeStr]) ->
 
     OnEventFn = 
 	case LogMode of 
-	    no_logs ->
-		fun(_, _) -> ok end;
-	    console_logs ->
-		fun(Code, Data) -> io:format(format_message(Code, Data)) end;
-	    file_logs ->
-		LogFile = json_get(log_file, JsonConf),
 
+	    no_logs ->
+		fun(_, _, _) -> ok end;
+
+	    console_logs ->
+		fun(Source, Code, Data) -> io:format(format_message(full, Source, Code, Data)) end;
+
+	    file_logs_full ->
+		LogFile = json_get(log_file, JsonConf),
 		file:write_file(LogFile, ""),
-		fun(Code, Data) -> 
-			file:write_file(LogFile, format_message(Code, Data), [append])
+
+		BlockLogFile = json_get(block_log_file, JsonConf),
+		file:write_file(BlockLogFile, ""),
+
+		fun(Source, Code, Data) -> 
+			file:write_file(LogFile, format_message(full, Source, Code, Data), [append]),
+			block_chain_output(Source, Code, Data, BlockLogFile),
+			ok
+		end;
+
+	    file_logs_codes ->
+		LogFile = json_get(log_file, JsonConf),
+		file:write_file(LogFile, ""),
+
+		BlockLogFile = json_get(block_log_file, JsonConf),
+		file:write_file(BlockLogFile, ""),
+
+		fun(Source, Code, Data) -> 
+			file:write_file(LogFile, format_message(code, Source, Code, Data), [append]),
+			block_chain_output(Source, Code, Data, BlockLogFile),
+			ok
 		end
 	end,		   
 
