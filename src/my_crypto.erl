@@ -21,15 +21,26 @@ is_public_key(Key) ->
 
 hash_full(Bin) -> crypto:hash(sha256, Bin).
 
-sign_full(Hash, PrivateKey) -> public_key:sign(Hash, none, PrivateKey).
+sign_full(Hash, PrivateKey) -> 
+    {ok, PemBin} = file:read_file(PrivateKey),
+    [RSAEntry] = public_key:pem_decode(PemBin),
+    ActualPrivateKey = public_key:pem_entry_decode(RSAEntry),
+    public_key:sign(Hash, none, ActualPrivateKey).
+
+%% sign_full(Hash, PrivateKey) -> 
+%%     public_key:sign(Hash, none, PrivateKey).
 
 verify_full(Hash, Signature, PubKey) -> public_key:verify(Hash, none, Signature, PubKey).
 
 read_file_key_full(private, FileName) ->
-    {ok, PemBin} = file:read_file(FileName),
-    [RSAEntry] = public_key:pem_decode(PemBin),
-    Key = public_key:pem_entry_decode(RSAEntry),
-    Key;
+    {ok, _PemBin} = file:read_file(FileName),
+    FileName;
+
+%% read_file_key_full(private, FileName) ->
+%%     {ok, PemBin} = file:read_file(FileName),
+%%     [RSAEntry] = public_key:pem_decode(PemBin),
+%%     Key = public_key:pem_entry_decode(RSAEntry),
+%%     Key;
 
 
 read_file_key_full(public, FileName) ->
