@@ -140,16 +140,6 @@ start_web_cluster([JsonFileName, LogModeStr]) ->
 
     JsonConf = jsx:decode(FileData, [return_maps]),
 
-    LogFile = 
-	case json_find(log_file, JsonConf) of
-	    {ok, <<"none">>} ->
-		no_log_file;
-	    {ok, FileName} ->
-		FileName;
-	    error ->
-		no_log_file
-	end,
-
     case json_find(web, JsonConf) of
 	{ok, <<"none">>} ->
 	    no_web;
@@ -168,7 +158,8 @@ start_web_cluster([JsonFileName, LogModeStr]) ->
 	    console_logs ->
 		fun(Code, Data) -> io:format(format_message(Code, Data)) end;
 	    file_logs ->
-		?assertNotEqual(LogFile, no_log_file),
+		LogFile = json_get(log_file, JsonConf),
+
 		file:write_file(LogFile, ""),
 		fun(Code, Data) -> 
 			file:write_file(LogFile, format_message(Code, Data), [append])

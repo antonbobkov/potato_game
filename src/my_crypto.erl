@@ -19,18 +19,28 @@ is_public_key(Key) ->
 
 %% Actual function implementations
 
-hash_full(Bin) -> crypto:hash(sha256, Bin).
+hash_full(Bin) -> 
+    Full = crypto:hash(sha256, Bin),
+
+    %% Copied this online :cat_scream:
+    HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Full ]),
+
+    HexString.
+
+%% hash_full(Bin) -> 
+%%     crypto:hash(sha256, Bin).
 
 sign_full(Hash, PrivateKey) -> 
     {ok, PemBin} = file:read_file(PrivateKey),
     [RSAEntry] = public_key:pem_decode(PemBin),
     ActualPrivateKey = public_key:pem_entry_decode(RSAEntry),
-    public_key:sign(Hash, none, ActualPrivateKey).
+    public_key:sign(binary:list_to_bin(Hash), none, ActualPrivateKey).
 
 %% sign_full(Hash, PrivateKey) -> 
 %%     public_key:sign(Hash, none, PrivateKey).
 
-verify_full(Hash, Signature, PubKey) -> public_key:verify(Hash, none, Signature, PubKey).
+verify_full(Hash, Signature, PubKey) -> 
+    public_key:verify(binary:list_to_bin(Hash), none, Signature, PubKey).
 
 read_file_key_full(private, FileName) ->
     {ok, _PemBin} = file:read_file(FileName),
@@ -54,10 +64,10 @@ potato_key() ->
 
 %% Debugging simplified functions
 
-%% cut hash down to three bytes
+%% cut hash down to six bytes
 hash_debug(Bin) ->
     Full = crypto:hash(sha256, Bin),
-    Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
+    Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 6)),
 
     %% Copied this online :cat_scream:
     HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Part ]),
