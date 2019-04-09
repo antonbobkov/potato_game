@@ -4,7 +4,7 @@
 
 -export([hash/1, sign/2, verify/3, read_file_key/2, potato_key/0, is_public_key/1]).
 
--define(MY_CRYPTO_DEBUG, true).
+%% -define(MY_CRYPTO_DEBUG, true).
 
 -type public_key() :: crypto:rsa_public().
 -type private_key() :: crypto:rsa_private().
