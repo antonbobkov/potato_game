@@ -133,10 +133,24 @@ format_message(full, Source, Code, Data) ->
     io_lib:format("~p ~p ~n ~p ~n ~n", [Source, Code, Data]);
 
 format_message(code, Source, Code, _Data) ->
-    io_lib:format("~p ~n ~p ~n ~n", [Source, Code]).
+    io_lib:format("~p ~n ~p ~n ~n", [Source, Code]);    
 
-block_chain_output(Source, Code = new_block_created, Block, BlockLogFile) ->
-    file:write_file(BlockLogFile, format_message(full, Source, Code, Block), [append]);
+format_message(json, Source, Code, Data) ->
+    S0 = io_lib:format("~p ~p ~n", [Source, Code]),
+    S1 = binary_to_list(jsx:encode(Data, [{indent, 4}, space])),
+    S2 = io_lib:format("~n~n", []),
+    S0 ++ S1 ++ S2.
+    
+
+block_chain_output(Source, Code = new_block_created, Block0, BlockLogFile) ->
+
+    CD0 = maps:get(consensus_data, Block0),
+    CD1 = maps:put(signature, omitted, CD0),
+    CD2 = maps:put(verifier_pub_key, omitted, CD1),
+
+    Block = maps:put(consensus_data, CD2, Block0),
+
+    file:write_file(BlockLogFile, format_message(json, Source, Code, Block), [append]);
 
 block_chain_output(_, _, _, _) ->
     ok.

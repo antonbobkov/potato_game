@@ -25,7 +25,7 @@ hash_full(Bin) ->
     %% Copied this online :cat_scream:
     HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Full ]),
 
-    HexString.
+    list_to_binary(HexString).
 
 %% hash_full(Bin) -> 
 %%     crypto:hash(sha256, Bin).
@@ -34,13 +34,13 @@ sign_full(Hash, PrivateKey) ->
     {ok, PemBin} = file:read_file(PrivateKey),
     [RSAEntry] = public_key:pem_decode(PemBin),
     ActualPrivateKey = public_key:pem_entry_decode(RSAEntry),
-    public_key:sign(binary:list_to_bin(Hash), none, ActualPrivateKey).
+    public_key:sign(Hash, none, ActualPrivateKey).
 
 %% sign_full(Hash, PrivateKey) -> 
 %%     public_key:sign(Hash, none, PrivateKey).
 
 verify_full(Hash, Signature, PubKey) -> 
-    public_key:verify(binary:list_to_bin(Hash), none, Signature, PubKey).
+    public_key:verify(Hash, none, Signature, PubKey).
 
 read_file_key_full(private, FileName) ->
     {ok, _PemBin} = file:read_file(FileName),
