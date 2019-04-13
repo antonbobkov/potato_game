@@ -59,6 +59,8 @@ on_timer(CurrentTime, PV0) ->
 
 	    NewBlock = pop_chain:apply_block_signature(my_crypto:sign(maps:get(this_id, NewBlockUnsigned), PrivateKey), NewBlockUnsigned),
 
+	    make_event(new_block_created, NewBlock, PV0),
+
 	    emit_net_message(verifiers, send_full_blocks, {new, [NewBlock]}, PV1),
 
 	    ok;
@@ -86,16 +88,19 @@ get_current_time(State) ->
 json_get(Key, Map) when is_atom(Key) ->
     maps:get(atom_to_binary(Key, utf8), Map).
 
+json_get_str(Key, Map) when is_atom(Key) ->
+    binary_to_list(maps:get(atom_to_binary(Key, utf8), Map)).
+
 %% json_get(Key, Map) when is_list(Key) ->
 %%     maps:get(list_to_binary(Key), Map).
 
 make_verifier_array_from_json(JsonConf) ->
-    ChainId = json_get(chain_id, JsonConf),
+    ChainId = json_get_str(chain_id, JsonConf),
     JsonVerifierConf = json_get(verifiers, JsonConf),
 
     VerFunc = 
 	fun(Index, VerConf) -> 
-		PublicKeyFile = json_get(public_key, VerConf),
+		PublicKeyFile = json_get_str(public_key, VerConf),
 
 		Ip = binary_to_list(json_get(ip, VerConf)),
 		Port = json_get(port, VerConf),
@@ -124,7 +129,7 @@ create_config_from_json(JsonConf, _ConfigData = {MyIndex, NetSendFn, EventFn, Co
     if ConfPrivateKey == default ->
 	    JsonVerifierConf = json_get(verifiers, JsonConf),
 	    MyConf = array:get(MyIndex, array:from_list(JsonVerifierConf)),
-	    PrivateKeyFile = json_get(private_key, MyConf),
+	    PrivateKeyFile = json_get_str(private_key, MyConf),
 	    PrivateKey = my_crypto:read_file_key(private, PrivateKeyFile);
        true ->
 	    PrivateKey = ConfPrivateKey
@@ -145,7 +150,7 @@ create_config_from_json(JsonConf, _ConfigData = {MyIndex, NetSendFn, EventFn, Co
     PopChainConfig = #pop_config_data{
 		   time_between_blocks = json_get(time_between_blocks_sec, JsonConf), 
 		   time_desync_margin = json_get(timestamp_tolerable_error_sec, JsonConf), 
-		   chain_id = json_get(chain_id, JsonConf), 
+		   chain_id = json_get_str(chain_id, JsonConf), 
 		   verifiers_arr = VerifierArr, 
 		   init_time = json_get(genesis_block_timestamp_sec, JsonConf)
 		  },
@@ -222,7 +227,7 @@ init(InitData = {explicit, PopConfigData, PopManagerConfig, PopVerConfig}) ->
 %% Each sub expired after a fixed time, to stay subscribed this message needs to be spammed periodically.
 %% (Similar to ping)
 
-handle_info({net_udp, Data = {SenderAddress, subscribe, _} }, State) ->
+handle_cast({net_udp, Data = {SenderAddress, subscribe, _} }, State) ->
 
     make_event(net_udp, Data, State),
  
@@ -234,7 +239,7 @@ handle_info({net_udp, Data = {SenderAddress, subscribe, _} }, State) ->
 
     {noreply, NewState};
 
-handle_info({net_udp, Data = {SenderAddress, MsgId, NetData} }, State) ->
+handle_cast({net_udp, Data = {SenderAddress, MsgId, NetData} }, State) ->
 
     make_event(net_udp, Data, State),
 
@@ -248,7 +253,7 @@ handle_info({net_udp, Data = {SenderAddress, MsgId, NetData} }, State) ->
 
     {noreply, NewState};
 
-handle_info({new_block, NewBlock}, State) ->
+handle_cast({new_block, NewBlock}, State) ->
     make_event(new_block, NewBlock, State),
 
     Sz = maps:size(State#pop_verifier.subscribers),
@@ -262,7 +267,7 @@ handle_info({new_block, NewBlock}, State) ->
 				 
     {noreply, State};
 
-handle_info(real_timer_tick, State) ->
+handle_cast(real_timer_tick, State) ->
     ?assertNotEqual(undefined, State#pop_verifier.timer_ref),
 
     CurrentTime = erlang:system_time(second),
@@ -273,10 +278,10 @@ handle_info(real_timer_tick, State) ->
 
     {noreply, NewState};
 
-handle_info(exit, State) ->
+handle_cast(exit, State) ->
     {stop, normal, State};
 
-handle_info({custom_timer_tick, CurrentTime}, State) ->
+handle_cast({custom_timer_tick, CurrentTime}, State) ->
     ?assertEqual(undefined, State#pop_verifier.timer_ref),
 
     make_event(custom_timer_tick, CurrentTime, State),
@@ -287,11 +292,13 @@ handle_info({custom_timer_tick, CurrentTime}, State) ->
 
     {noreply, State2};
 
-handle_info(Data, _State) ->
-    erlang:error(unexpected_handle_info, [Data]).
-
 handle_cast(Data, _State) ->
     erlang:error(unexpected_handle_cast, [Data]).
+
+% Kind of hacky - forward messages as cast calls
+handle_info(Data, State) ->
+    handle_cast(Data, State).
+
 
 handle_call(E, From, _S) ->
     erlang:error(unexpected_handle_call, [E, From]).

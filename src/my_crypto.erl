@@ -4,7 +4,7 @@
 
 -export([hash/1, sign/2, verify/3, read_file_key/2, potato_key/0, is_public_key/1]).
 
--define(MY_CRYPTO_DEBUG, true).
+%% -define(MY_CRYPTO_DEBUG, true).
 
 -type public_key() :: crypto:rsa_public().
 -type private_key() :: crypto:rsa_private().
@@ -19,17 +19,38 @@ is_public_key(Key) ->
 
 %% Actual function implementations
 
-hash_full(Bin) -> crypto:hash(sha256, Bin).
+hash_full(Bin) -> 
+    Full = crypto:hash(sha256, Bin),
 
-sign_full(Hash, PrivateKey) -> public_key:sign(Hash, none, PrivateKey).
+    %% Copied this online :cat_scream:
+    HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Full ]),
 
-verify_full(Hash, Signature, PubKey) -> public_key:verify(Hash, none, Signature, PubKey).
+    list_to_binary(HexString).
+
+%% hash_full(Bin) -> 
+%%     crypto:hash(sha256, Bin).
+
+sign_full(Hash, PrivateKey) -> 
+    {ok, PemBin} = file:read_file(PrivateKey),
+    [RSAEntry] = public_key:pem_decode(PemBin),
+    ActualPrivateKey = public_key:pem_entry_decode(RSAEntry),
+    public_key:sign(Hash, none, ActualPrivateKey).
+
+%% sign_full(Hash, PrivateKey) -> 
+%%     public_key:sign(Hash, none, PrivateKey).
+
+verify_full(Hash, Signature, PubKey) -> 
+    public_key:verify(Hash, none, Signature, PubKey).
 
 read_file_key_full(private, FileName) ->
-    {ok, PemBin} = file:read_file(FileName),
-    [RSAEntry] = public_key:pem_decode(PemBin),
-    Key = public_key:pem_entry_decode(RSAEntry),
-    Key;
+    {ok, _PemBin} = file:read_file(FileName),
+    FileName;
+
+%% read_file_key_full(private, FileName) ->
+%%     {ok, PemBin} = file:read_file(FileName),
+%%     [RSAEntry] = public_key:pem_decode(PemBin),
+%%     Key = public_key:pem_entry_decode(RSAEntry),
+%%     Key;
 
 
 read_file_key_full(public, FileName) ->
@@ -43,10 +64,10 @@ potato_key() ->
 
 %% Debugging simplified functions
 
-%% cut hash down to three bytes
+%% cut hash down to six bytes
 hash_debug(Bin) ->
     Full = crypto:hash(sha256, Bin),
-    Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 3)),
+    Part = binary:list_to_bin(binary:bin_to_list(Full, 0, 6)),
 
     %% Copied this online :cat_scream:
     HexString = lists:flatten([io_lib:format("~2.16.0B",[X]) || <<X:8>> <= Part ]),

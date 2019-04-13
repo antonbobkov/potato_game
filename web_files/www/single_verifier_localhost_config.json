@@ -1,0 +1,34 @@
+{
+    // Essential parameters:
+    // those have to be the same for all verifiers
+    "genesis_block_timestamp_sec" : "now",
+    "time_between_blocks_sec" : 5,
+    "chain_id" : "docker_chain",
+
+    // Nonessential parameters,
+    // those can vary to adjust performance
+    "timestamp_tolerable_error_sec" : 5,
+    "block_request_range_size" : 3,
+    "subscriber_time_out_sec" : 20,
+    "timer_tick_interval_sec" : 1,
+    
+    // list of all verifiers
+    // (essential, except for private key info)
+    "verifiers" : [
+	{
+	    "public_key" : "../key1.pub",
+	    "private_key" : "../key1.prv",
+	    "ip" : "localhost",
+	    "port" : 4000,
+	},
+    ],
+
+    "log_file" : "./www/potato_event.log",
+    "block_log_file" : "./www/blocks.log",
+    
+    "web" : {
+	"port" : 8081,
+	"logs_dir" : "./www/web_logs/",
+	"file_dir" : "./www"
+    }
+}
