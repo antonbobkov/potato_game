@@ -33,6 +33,7 @@ start(Port, LogsDir, DocDir) ->
 			     {server_root, "."}, 
 			     {document_root, DocDir}, 
 			     {erl_script_alias, {"/erl", [potato_cluster_web_server]}}, 
+			     {erl_script_nocache, true},
 			     {error_log, LogsDir ++ "/error.log"}, 
 			     {security_log, LogsDir ++ "/security.log"}, 
 			     {transfer_log, LogsDir ++ "/transfer.log"}, 
