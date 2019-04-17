@@ -40,6 +40,14 @@
   validators :: [#verifier_public_info{}],
   otherstuff :: term()}).
 
+-record(potato_verifier_data,
+	{
+	  json_config, 
+	  udp_id_list, 
+	  ver_id_list, 
+	  on_event_fn
+	}).
+
 %% These are handled by maps rather than records
 -define(block, [previous_id, this_id, height, transactions, consensus_data]).
 -define(consensus_block_data, [signature, verifier_pub_key, verifier_index, timestamp]).

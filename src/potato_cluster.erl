@@ -13,18 +13,6 @@
 
 -include("potato_records.hrl").
 
-json_find(Key, Map) when is_atom(Key) ->
-    maps:find(atom_to_binary(Key, utf8), Map).
-
-json_get(Key, Map) when is_atom(Key) ->
-    maps:get(atom_to_binary(Key, utf8), Map).
-
-json_get_str(Key, Map) when is_atom(Key) ->
-    binary_to_list(maps:get(atom_to_binary(Key, utf8), Map)).
-
-json_put(Key, Value, Map) when is_atom(Key) ->
-    maps:put(atom_to_binary(Key, utf8), Value, Map).
-
 start_one_pop_verifier(VerifierArr, JsonConf, MyIndex, UdpServerId, OnEventFn) ->
 
     MyAddress = (array:get(MyIndex, VerifierArr))#verifier_public_info.network_data,
@@ -78,11 +66,11 @@ start_single_server_cluster(VerifierArr, JsonConf, ServerAddress, UdpServerId, O
 start_cluster_from_json(JsonConf_0, OnEventFn) ->
 
     JsonConf = 
-	case json_get(genesis_block_timestamp_sec, JsonConf_0) of
+	case json:get(genesis_block_timestamp_sec, JsonConf_0) of
 
 	    <<"now">> ->
 		Time = erlang:system_time(second),
-		json_put(genesis_block_timestamp_sec, Time, JsonConf_0);
+		json:put(genesis_block_timestamp_sec, Time, JsonConf_0);
 
 	    _ ->
 		JsonConf_0
@@ -177,14 +165,14 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 
     JsonConf = jsx:decode(FileData, [return_maps]),
 
-    case json_find(web, JsonConf) of
+    case json:find(web, JsonConf) of
 	{ok, <<"none">>} ->
 	    no_web;
 	{ok, JsonWebConf} ->
 
-	    WebPort = json_get(port, JsonWebConf),
-	    WebLogsDir = json_get_str(logs_dir, JsonWebConf),
-	    WebFileDir = json_get_str(file_dir, JsonWebConf),
+	    WebPort = json:get(port, JsonWebConf),
+	    WebLogsDir = json:get_str(logs_dir, JsonWebConf),
+	    WebFileDir = json:get_str(file_dir, JsonWebConf),
 
 	    potato_cluster_web_server:start(WebPort, WebLogsDir, WebFileDir),
 	    ok;
@@ -202,10 +190,10 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 		fun(Source, Code, Data) -> io:format(format_message(full, Source, Code, Data)) end;
 
 	    file_logs_full ->
-		LogFile = json_get(log_file, JsonConf),
+		LogFile = json:get(log_file, JsonConf),
 		file:write_file(LogFile, ""),
 
-		BlockLogFile = json_get(block_log_file, JsonConf),
+		BlockLogFile = json:get(block_log_file, JsonConf),
 		file:write_file(BlockLogFile, ""),
 
 		fun(Source, Code, Data) -> 
@@ -215,10 +203,10 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 		end;
 
 	    file_logs_codes ->
-		LogFile = json_get(log_file, JsonConf),
+		LogFile = json:get(log_file, JsonConf),
 		file:write_file(LogFile, ""),
 
-		BlockLogFile = json_get(block_log_file, JsonConf),
+		BlockLogFile = json:get(block_log_file, JsonConf),
 		file:write_file(BlockLogFile, ""),
 
 		fun(Source, Code, Data) -> 
