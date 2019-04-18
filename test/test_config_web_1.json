@@ -25,6 +25,7 @@
 
     "log_file" : "./test/www_test/potato_event.log",
     "block_log_file" : "./test/www_test/blocks.log",
+    "directory_to_track" : "./test/www_test/",
     
     "web" : {
 	"port" : 4081,

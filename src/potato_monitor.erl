@@ -19,9 +19,9 @@ make_event(Code, Data, State) ->
 init(InitData) when is_record(InitData, potato_monitor_data) ->
     State = InitData,
     make_event(start, InitData, State),
-    InitData.
+    {ok, InitData}.
 
-handle_call({get_blocks_tail}, From, State) ->
+handle_call(get_blocks_tail, From, State) ->
     make_event(get_blocks_tail, From, State),
 
     JsonConf = State#potato_monitor_data.json_config,
@@ -31,7 +31,7 @@ handle_call({get_blocks_tail}, From, State) ->
     
     {reply, Data, State};
 
-handle_call({get_disk_use}, From, State) ->
+handle_call(get_disk_use, From, State) ->
     make_event(get_disk_use, From, State),
 
     JsonConf = State#potato_monitor_data.json_config,

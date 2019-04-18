@@ -79,7 +79,10 @@ web_cluster_test() ->
     LogModeStr = file_logs_full,
 
     RefData = potato_cluster:start_web_cluster([JsonFileName, LogModeStr]),
-    timer:sleep(100),
+
+    gen_server:call({global, potato_monitor}, get_blocks_tail),
+    gen_server:call({global, potato_monitor}, get_disk_use),
+
     potato_cluster:stop_web_cluster(RefData),
     ok.
 
