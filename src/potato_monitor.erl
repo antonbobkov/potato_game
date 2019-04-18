@@ -11,12 +11,12 @@
 -include("potato_records.hrl").
 
 make_event(Code, Data, State) ->
-    EventFn = State#potato_verifier_data.on_event_fn,
+    EventFn = State#potato_monitor_data.on_event_fn,
     EventFn(Code, Data),
     ok.
 
 
-init(InitData) when is_record(InitData, potato_verifier_data) ->
+init(InitData) when is_record(InitData, potato_monitor_data) ->
     State = InitData,
     make_event(start, InitData, State),
     InitData.
@@ -24,7 +24,7 @@ init(InitData) when is_record(InitData, potato_verifier_data) ->
 handle_call({get_blocks_tail}, From, State) ->
     make_event(get_blocks_tail, From, State),
 
-    JsonConf = State#potato_verifier_data.json_config,
+    JsonConf = State#potato_monitor_data.json_config,
     BlockLogFile = json:get_str(block_log_file, JsonConf),    
 
     Data = os:cmd("tail -n 42 " ++ BlockLogFile),
@@ -34,7 +34,7 @@ handle_call({get_blocks_tail}, From, State) ->
 handle_call({get_disk_use}, From, State) ->
     make_event(get_disk_use, From, State),
 
-    JsonConf = State#potato_verifier_data.json_config,
+    JsonConf = State#potato_monitor_data.json_config,
     TrackDir = json:get_str(directory_to_track, JsonConf),    
 
     Data = os:cmd("du -sh " ++ TrackDir),

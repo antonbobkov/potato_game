@@ -40,7 +40,7 @@
   validators :: [#verifier_public_info{}],
   otherstuff :: term()}).
 
--record(potato_verifier_data,
+-record(potato_monitor_data,
 	{
 	  json_config, 
 	  udp_id_list, 

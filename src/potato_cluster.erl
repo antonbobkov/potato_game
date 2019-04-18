@@ -220,11 +220,26 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 
     {UdpServerIdList, VerifierIdList} = start_cluster_from_json(JsonConf, OnEventFn),
 
+    MonitorInitData = 
+	#potato_monitor_data
+	{
+	  json_config = JsonConf, 
+	  udp_id_list = UdpServerIdList, 
+	  ver_id_list = VerifierIdList, 
+	  on_event_fn = fun(C, D) -> OnEventFn(potato_monitor, C, D) end
+	},
+
+    gen_server:start_link({global, potato_monitor}, potato_monitor, MonitorInitData, []),
+
     {WebServerReference, UdpServerIdList, VerifierIdList}.
 
 
 stop_web_cluster(_Data = {WebServerReference, UdpServerIdList, VerifierIdList}) ->
+
+    ok = gen_server:stop({global, potato_monitor}),
+
     ok = stop_cluster({UdpServerIdList, VerifierIdList}),
+    
     ok = case WebServerReference of 
 	     no_web ->
 		 ok;

@@ -16,8 +16,8 @@
     // (essential, except for private key info)
     "verifiers" : [
 	{
-	    "public_key" : "key1.pub",
-	    "private_key" : "key1.prv",
+	    "public_key"  : "./key1.pub",
+	    "private_key" : "./key1.prv",
 	    "ip" : "localhost",
 	    "port" : 4400,
 	},
