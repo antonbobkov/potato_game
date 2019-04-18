@@ -1,6 +1,7 @@
 -module(json).
 
 -compile(export_all).
+-compile(nowarn_export_all).
 
 %% -include_lib("stdlib/include/assert.hrl").
 %% -include_lib("eunit/include/eunit.hrl").

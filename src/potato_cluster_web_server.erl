@@ -11,7 +11,16 @@
 	]). 
 
 start(Port, LogsDir, DocDir) ->
-    ok = inets:start(),
+    Res = inets:start(),
+    case Res of
+	ok ->
+	    ok;
+	{error,{already_started,inets}} ->
+	    ok;
+	_ ->
+	    erlang:error(Res)
+    end,
+
     {ok, Reference} = 
 	inets:start(httpd, [ 
 			     {modules,
@@ -53,7 +62,7 @@ start(Port, LogsDir, DocDir) ->
 
 stop(Reference) ->
     ok = inets:stop(httpd, Reference), 
-    ok = inets:stop(),
+    %% ok = inets:stop(),
 
     ok.
     
@@ -101,7 +110,7 @@ list_to_html_pre(List) ->
 
 get_system_info_test() -> list_to_html_pre(get_system_info()).
 
-get_system_info(SessionID, Env, Input) -> 
+get_system_info(SessionID, _Env, _Input) -> 
     io:format("get_system_info ~n", []),
     mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n" ++ list_to_html_pre(get_system_info()) ++ "</html>\n" ]).
 

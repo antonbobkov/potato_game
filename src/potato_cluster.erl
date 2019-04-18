@@ -5,7 +5,8 @@
 	 start_single_server_cluster/5,
 	 start_cluster_from_json/2,
 	 stop_cluster/1,
-	 start_web_cluster/1
+	 start_web_cluster/1,
+	 stop_web_cluster/1
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
@@ -102,17 +103,18 @@ start_cluster_from_json(JsonConf_0, OnEventFn) ->
     {UdpServerIdList, lists:flatten(VerifierIdList)}.
     
 stop_cluster({UdpServerIdList, VerifierIdList}) ->
-    lists:foreach(
-      fun(UdpId) ->
-	      gen_server:stop({global, UdpId})
-      end,
-      UdpServerIdList),
 
     lists:foreach(
       fun(Id) ->
 	      gen_server:stop({global, Id})
       end,
       VerifierIdList),
+
+    lists:foreach(
+      fun(UdpId) ->
+	      gen_server:stop({global, UdpId})
+      end,
+      UdpServerIdList),
 
     ok.
 
@@ -165,20 +167,20 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 
     JsonConf = jsx:decode(FileData, [return_maps]),
 
-    case json:find(web, JsonConf) of
-	{ok, <<"none">>} ->
-	    no_web;
-	{ok, JsonWebConf} ->
+    WebServerReference = 
+	case json:find(web, JsonConf) of
+	    {ok, <<"none">>} ->
+		no_web;
+	    {ok, JsonWebConf} ->
 
-	    WebPort = json:get(port, JsonWebConf),
-	    WebLogsDir = json:get_str(logs_dir, JsonWebConf),
-	    WebFileDir = json:get_str(file_dir, JsonWebConf),
+		WebPort = json:get(port, JsonWebConf),
+		WebLogsDir = json:get_str(logs_dir, JsonWebConf),
+		WebFileDir = json:get_str(file_dir, JsonWebConf),
 
-	    potato_cluster_web_server:start(WebPort, WebLogsDir, WebFileDir),
-	    ok;
-	error ->
-	    no_web
-    end,
+		potato_cluster_web_server:start(WebPort, WebLogsDir, WebFileDir);
+	    error ->
+		no_web
+	end,
 
     OnEventFn = 
 	case LogMode of 
@@ -216,6 +218,18 @@ start_web_cluster_inner([JsonFileName, LogModeStr]) ->
 		end
 	end,		   
 
-    start_cluster_from_json(JsonConf, OnEventFn),
+    {UdpServerIdList, VerifierIdList} = start_cluster_from_json(JsonConf, OnEventFn),
 
+    {WebServerReference, UdpServerIdList, VerifierIdList}.
+
+
+stop_web_cluster(_Data = {WebServerReference, UdpServerIdList, VerifierIdList}) ->
+    ok = stop_cluster({UdpServerIdList, VerifierIdList}),
+    ok = case WebServerReference of 
+	     no_web ->
+		 ok;
+	     _ ->
+		 potato_cluster_web_server:stop(WebServerReference)
+	 end,
+		     
     ok.
