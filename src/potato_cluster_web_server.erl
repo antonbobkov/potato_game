@@ -7,7 +7,8 @@
 	 start/3,
 	 stop/1,
 	 basic/3,
-	 get_system_info/3
+	 get_system_info/3,
+	 get_report/3
 	]). 
 
 start(Port, LogsDir, DocDir) ->
@@ -114,3 +115,20 @@ get_system_info(SessionID, _Env, _Input) ->
     io:format("get_system_info ~n", []),
     mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n" ++ list_to_html_pre(get_system_info()) ++ "</html>\n" ]).
 
+%% str_pre(Str) ->
+%%     lists:concat(["<pre>", Str, "</pre>\n"]).
+
+get_report(SessionID, _Env, _Input) -> 
+    io:format("get_report ~n", []),
+    mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", 
+				lists:concat(
+				  [
+				   "\n<html>\n", 
+				   "<pre>", 
+				   gen_server:call({global, potato_monitor}, get_disk_use),
+				   "</pre>\n", 
+				   "<pre>", 
+				   gen_server:call({global, potato_monitor}, get_blocks_tail),
+				   "</pre>\n", 
+				   "</html>\n"
+				  ])]).
