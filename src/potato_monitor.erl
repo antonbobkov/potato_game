@@ -35,9 +35,12 @@ handle_call(get_disk_use, From, State) ->
     make_event(get_disk_use, From, State),
 
     JsonConf = State#potato_monitor_data.json_config,
-    TrackDir = json:get_str(directory_to_track, JsonConf),    
-
-    Data = os:cmd("du -sh " ++ TrackDir),
+    case json:find(directory_to_track, JsonConf) of 
+	{ok, TrackDir} ->
+	    Data = os:cmd("du -sh " ++ binary_to_list(TrackDir));
+	error ->
+	    Data = "tracking: no directory_to_track field in config"
+    end,
     
     {reply, Data, State};
 

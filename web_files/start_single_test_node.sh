@@ -2,7 +2,7 @@ cd ..
 
 rebar3 compile &&
 
-rebar3 eunit -mpotato_cluster_test &&    
+rebar3 eunit && #-mpotato_cluster_test &&    
 
 cd web_files &&
 

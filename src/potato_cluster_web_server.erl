@@ -74,6 +74,8 @@ basic(SessionID, Env, Input) ->
     mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n<body>\nHello, World!\n</body> <pre>" ++ Inp ++ "</pre>\n</html>" ]).
 
 
+    
+
 get_system_info() ->
     Time1 = erlang:localtime(),
     Time2 = erlang:system_time(second),
@@ -121,32 +123,77 @@ get_system_info(SessionID, _Env, _Input) ->
 html(Tag, Str) ->
      lists:concat(["<", Tag, ">", Str, "</", Tag, ">\n"]).
 
-pairs_to_html_table(PairList, H1, H2) ->
+pairs_to_html_table(PairList) ->
     lists:concat(
       [
-       "<table>",
-       html("th", H1), 
-       html("th", H2),
-       pairs_to_html_table(PairList),
+       "<table>\n",
+       pairs_to_html_table_r(PairList),
        "</table>\n"
       ]).
 
-pairs_to_html_table(PairList) when is_list(PairList)->
-    lists:concat(lists:map(fun pairs_to_html_table/1, PairList));
+pairs_to_html_table_r(PairList) when is_list(PairList)->
+    lists:concat(lists:map(fun pairs_to_html_table_r/1, PairList));
 
-pairs_to_html_table({Key, Val}) ->
+pairs_to_html_table_r({Key, Val}) ->
     lists:concat(
       [
-       "<tr>",
+       "<tr>\n",
        html("td", Key),
        html("td", Val),
+       "</tr>\n"
+      ]);
+
+pairs_to_html_table_r({th, Key, Val}) ->
+    lists:concat(
+      [
+       "<tr>\n",
+       html("th", Key),
+       html("th", Val),
        "</tr>\n"
       ]).
 
 pairs_to_html_table_test() ->
-    Mp = [{mem1, "hello"}, {mem2, hi}],
-    pairs_to_html_table(Mp, "h1", "h2"),
+    Mp = [{th, "one", "two"}, {mem1, "hello"}, {"mem2", hi}],
+    pairs_to_html_table(Mp),
     ok.
+
+get_time_info() ->
+    {{Year, Month, Day}, {Hour, Minute, Second}} = erlang:localtime(),
+    %% StrTime = lists:flatten(io_lib:format("~4..0w-~2..0w-~2..0wT~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second])).    
+    StrTime = io_lib:format("~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w",[Year,Month,Day,Hour,Minute,Second]),
+    
+    [
+     {"local time", StrTime},
+     {"timestamp", erlang:system_time(second)}
+    ].
+
+%% round(Number, Precision) ->
+%%     P = math:pow(10, Precision),
+%%     round(Number * P) / P.
+
+get_ram_info() ->
+    {DockerByteMem, _} = string:to_integer(os:cmd("cat /sys/fs/cgroup/memory/memory.usage_in_bytes")),
+    DocMem = DockerByteMem / 1000000,
+    
+    [
+     {th, "type", "MB"},
+     {"erlang memory", io_lib:format("~.2f", [erlang:memory(total) / 1000000])},
+     {"docker memory", io_lib:format("~.2f", [DocMem])}
+    ].
+
+get_ext_ram_info() -> os:cmd("free -h").
+
+get_process_info() -> os:cmd("ps aux | grep 'erlang\\\|USER' | grep -v grep").
+		      
+    
+
+get_info_test() ->
+    get_time_info(),
+    get_ram_info(),
+    get_ext_ram_info(),
+    get_process_info(),
+    ok.
+
 
 get_report(SessionID, _Env, _Input) -> 
     io:format("get_report ~n", []),
@@ -155,7 +202,15 @@ get_report(SessionID, _Env, _Input) ->
 				  [
 				   "\n<html>\n", 
 				   html("pre", gen_server:call({global, potato_monitor}, get_disk_use)),
+				   "\n<hr>\n", 
+				   pairs_to_html_table(get_time_info()),
+				   "\n<hr>\n", 
+				   pairs_to_html_table(get_ram_info()),
+				   "\n<hr>\n", 
+				   html("pre", get_ext_ram_info()),
+				   "\n<hr>\n", 
+				   html("pre", get_process_info()),
+				   "\n<hr>\n", 
 				   html("pre", gen_server:call({global, potato_monitor}, get_blocks_tail)),
-				   pairs_to_html_table([{mem1, "hello"}, {mem2, hi}], "h1", "h2"),
 				   "</html>\n"
 				  ])]).
