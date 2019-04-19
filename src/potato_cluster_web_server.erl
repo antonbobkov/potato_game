@@ -118,17 +118,44 @@ get_system_info(SessionID, _Env, _Input) ->
 %% str_pre(Str) ->
 %%     lists:concat(["<pre>", Str, "</pre>\n"]).
 
+html(Tag, Str) ->
+     lists:concat(["<", Tag, ">", Str, "</", Tag, ">\n"]).
+
+pairs_to_html_table(PairList, H1, H2) ->
+    lists:concat(
+      [
+       "<table>",
+       html("th", H1), 
+       html("th", H2),
+       pairs_to_html_table(PairList),
+       "</table>\n"
+      ]).
+
+pairs_to_html_table(PairList) when is_list(PairList)->
+    lists:concat(lists:map(fun pairs_to_html_table/1, PairList));
+
+pairs_to_html_table({Key, Val}) ->
+    lists:concat(
+      [
+       "<tr>",
+       html("td", Key),
+       html("td", Val),
+       "</tr>\n"
+      ]).
+
+pairs_to_html_table_test() ->
+    Mp = [{mem1, "hello"}, {mem2, hi}],
+    pairs_to_html_table(Mp, "h1", "h2"),
+    ok.
+
 get_report(SessionID, _Env, _Input) -> 
     io:format("get_report ~n", []),
     mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", 
 				lists:concat(
 				  [
 				   "\n<html>\n", 
-				   "<pre>", 
-				   gen_server:call({global, potato_monitor}, get_disk_use),
-				   "</pre>\n", 
-				   "<pre>", 
-				   gen_server:call({global, potato_monitor}, get_blocks_tail),
-				   "</pre>\n", 
+				   html("pre", gen_server:call({global, potato_monitor}, get_disk_use)),
+				   html("pre", gen_server:call({global, potato_monitor}, get_blocks_tail)),
+				   pairs_to_html_table([{mem1, "hello"}, {mem2, hi}], "h1", "h2"),
 				   "</html>\n"
 				  ])]).
