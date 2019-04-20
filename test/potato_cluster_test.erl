@@ -82,6 +82,7 @@ web_cluster_test() ->
 
     gen_server:call({global, potato_monitor}, get_blocks_tail),
     gen_server:call({global, potato_monitor}, get_disk_use),
+    gen_server:call({global, potato_monitor}, get_status_info),
 
     potato_cluster:stop_web_cluster(RefData),
     ok.

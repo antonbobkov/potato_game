@@ -44,6 +44,20 @@ handle_call(get_disk_use, From, State) ->
     
     {reply, Data, State};
 
+handle_call(get_status_info, From, State) ->
+    make_event(get_status_info, From, State),
+
+    VerIdList = State#potato_monitor_data.ver_id_list,
+
+    StatusData = lists:map(
+		   fun(VerId) -> 
+			   [{verifier, io_lib:format("~p", [VerId])}] ++
+			   gen_server:call({global, VerId}, get_status_info)
+		   end,
+		   VerIdList),
+    
+    {reply, StatusData, State};
+
 handle_call(E, From, _S) ->
     erlang:error(unexpected_handle_call, [E, From]).
 

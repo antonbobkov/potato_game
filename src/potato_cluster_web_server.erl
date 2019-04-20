@@ -152,6 +152,11 @@ get_info_test() ->
 
 get_report(SessionID, _Env, _Input) -> 
     io:format("get_report ~n", []),
+
+    StatusInfo = gen_server:call({global, potato_monitor}, get_status_info),
+
+    StatusInfoStr = lists:concat(lists:map(fun pairs_to_html_table/1, StatusInfo)),
+
     mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", 
 				lists:concat(
 				  [
@@ -161,6 +166,8 @@ get_report(SessionID, _Env, _Input) ->
 				   pairs_to_html_table(get_time_info()),
 				   "\n<hr>\n", 
 				   pairs_to_html_table(get_ram_info()),
+				   "\n<hr>\n", 
+				   StatusInfoStr,
 				   "\n<hr>\n", 
 				   html("pre", get_ext_ram_info()),
 				   "\n<hr>\n", 
