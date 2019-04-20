@@ -8,7 +8,7 @@
 
 -record(pop_config_data, {time_between_blocks, time_desync_margin, chain_id, verifiers_arr, init_time}).
 
--record(pop_chain, {pop_config_data, tree_data, head_block, genisys_block}).
+-record(pop_chain, {pop_config_data, tree_data, head_block, genesis_block}).
 
 -record(pop_manager_config, {request_range_backup, 
 			     net_multi_send, 

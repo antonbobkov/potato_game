@@ -7,7 +7,7 @@
 	 generate_new_block/2,
 
 	 find_block_by_id/2,
-	 get_genisys_block/1,
+	 get_genesis_block/1,
 	 get_head_block/1,
 
 	 get_verfier_next_block_time/2,
@@ -249,7 +249,7 @@ new(PopConfigData)
 	    pop_config_data = PopConfigData,
 	    tree_data = TD1,
 	    head_block = B1,
-	    genisys_block = B1
+	    genesis_block = B1
 	   },
     PC.
 
@@ -392,7 +392,7 @@ find_block_by_id(Id, PC)
     maps:find(Id, PC#pop_chain.tree_data#tree_data.block_map).
 
 %% @doc Gets first block.
-get_genisys_block(PC) -> PC#pop_chain.genisys_block.
+get_genesis_block(PC) -> PC#pop_chain.genesis_block.
 
 %% @doc Gets last block.
 get_head_block(PC) -> PC#pop_chain.head_block.

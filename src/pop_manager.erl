@@ -270,7 +270,7 @@ on_net_message(SenderAddress, _, request_block_hash_range, {KnownHash1, KnownHas
 	St2 == in_chain ->
 	    KnownHash = KnownHash2;
 	true ->
-	    KnownHash = maps:get(this_id, pop_chain:get_genisys_block(PopManager#pop_manager.pop_chain))
+	    KnownHash = maps:get(this_id, pop_chain:get_genesis_block(PopManager#pop_manager.pop_chain))
     end,
 
     RequestHashList = compute_block_hash_range(UnknownHash, KnownHash, PopManager),
