@@ -7,7 +7,6 @@
 	 start/3,
 	 stop/1,
 	 basic/3,
-	 get_system_info/3,
 	 get_report/3
 	]). 
 
@@ -75,50 +74,6 @@ basic(SessionID, Env, Input) ->
 
 
     
-
-get_system_info() ->
-    Time1 = erlang:localtime(),
-    Time2 = erlang:system_time(second),
-
-    % Erlang memory usage
-    ErlMem = erlang:memory(),
-    ErlMemTotal = erlang:memory(total) / 1000000,
-
-    % extenal os memory usage
-    SysMem = os:cmd("free -mt"),
-
-    % docker memory usage
-    {DockerByteMem, _} = string:to_integer(os:cmd("cat /sys/fs/cgroup/memory/memory.usage_in_bytes")),
-    DocMem = DockerByteMem / 1000000,
-
-    [Time1, Time2, line, ErlMem, ErlMemTotal, line, SysMem, line, DocMem].
-
-list_to_html_pre(List) ->
-
-    MapFn = fun 
-		(line) ->
-		    io_lib:format("~n", []);
-		(Data) ->
-		    io_lib:format("~p~n", [Data])
-	    end,
-
-    StrList = lists:map(MapFn, List),
-
-    
-    Final = lists:concat(["<pre>"] ++ StrList ++ ["</pre>\n"]),
-    
-    Final.
-	
-
-
-get_system_info_test() -> list_to_html_pre(get_system_info()).
-
-get_system_info(SessionID, _Env, _Input) -> 
-    io:format("get_system_info ~n", []),
-    mod_esi:deliver(SessionID, ["Content-Type: text/html\r\n\r\n", "\n<html>\n" ++ list_to_html_pre(get_system_info()) ++ "</html>\n" ]).
-
-%% str_pre(Str) ->
-%%     lists:concat(["<pre>", Str, "</pre>\n"]).
 
 html(Tag, Str) ->
      lists:concat(["<", Tag, ">", Str, "</", Tag, ">\n"]).
