@@ -17,7 +17,9 @@
 	 compute_transaction_hash/1,
 
 	 apply_block_signature/2,
-	 apply_transaction_signature/2
+	 apply_transaction_signature/2,
+
+	 get_status_info/1
 	]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -412,3 +414,10 @@ add_transaction(T, PC)
     {Status, TD1} = blocktree:add_new_transaction(T, TD),
     
     {Status, PC#pop_chain{tree_data = TD1} }.
+
+get_status_info(_PopChain = #pop_chain{tree_data = Tree, head_block = HB}) ->
+
+    blocktree:get_status_info(Tree) ++
+    [
+     {"block chain size", maps:get(height, HB)}
+    ].

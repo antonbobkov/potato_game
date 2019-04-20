@@ -300,8 +300,14 @@ handle_info(Data, State) ->
     handle_cast(Data, State).
 
 
+handle_call(get_status_info, _From, State) ->
+    PM = State#pop_verifier.pop_manager,
+    Reply = pop_manager:get_status_info(PM),
+    {reply, Reply, State};
+
 handle_call(E, From, _S) ->
     erlang:error(unexpected_handle_call, [E, From]).
+
 
 code_change(OldVsn, _State, Extra) ->
     erlang:error(unexpected_code_change, [OldVsn, Extra]).

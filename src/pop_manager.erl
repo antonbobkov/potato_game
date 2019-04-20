@@ -13,7 +13,8 @@
 
 -export([
 	 new/2,
-	 on_net_message/5
+	 on_net_message/5,
+	 get_status_info/1
 	 %% fn_convert_to_multi_address
 	]).
 
@@ -316,3 +317,10 @@ on_net_message(_, _, send_transactions, TransactionList, PopManager) ->
 
 on_net_message(SenderAddress, CurrentTime, MsgId, MsgData, PopManager) ->
     erlang:error(unknown_net_message, [SenderAddress, CurrentTime, MsgId, MsgData, PopManager]).
+
+get_status_info(_PopManager = #pop_manager{unbound_blocks = Unb, pop_chain = Chain}) ->
+
+    pop_chain:get_status_info(Chain) ++
+    [
+     {"unbound blocks", maps:size(Unb)}
+    ].

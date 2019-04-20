@@ -11,7 +11,8 @@
 	 add_new_transaction/2,
 	 add_block_in_order/2,
 	 generate_new_block/2,
-	 get_block_by_id/2
+	 get_block_by_id/2,
+	 get_status_info/1
 	 %% get_all_longest_branches/1,
 	 %% get_children_block_list/2
 	]).
@@ -253,3 +254,15 @@ get_block_by_id(Id, TreeData)
 %%   when is_record(TreeData, tree_data) ->
 %%     #tree_data{block_map = BlockMap} = TreeData,
 %%     maps:values(maps:filter(fun(_, B) -> maps:get(previous_id, B) == PrevId end, BlockMap)).
+
+
+get_status_info(_TreeData = #tree_data{pending_transactions = Tx, block_map = Mp}) ->
+    
+    pending_transactions:get_status_info(Tx) ++
+    [
+     {"blocks in tree", maps:size(Mp)}
+    ].
+    
+
+    
+    
