@@ -247,6 +247,9 @@ fancy_test() ->
 
     ?assert(no_more_messages()),
 
+    pop_manager:get_status_info(PM_B_C5),
+    
+
     %% Test request_block_hash_range
 
     ReqHashRangeTestFn = 

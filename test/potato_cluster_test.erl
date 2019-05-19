@@ -72,3 +72,18 @@ one_udp_tick_test() ->
     wait_for_message(terminate, 3),
 
     ok.
+
+web_cluster_test() ->
+
+    JsonFileName = "./test/test_config_web_1.json",
+    LogModeStr = file_logs_full,
+
+    RefData = potato_cluster:start_web_cluster([JsonFileName, LogModeStr]),
+
+    gen_server:call({global, potato_monitor}, get_blocks_tail),
+    gen_server:call({global, potato_monitor}, get_disk_use),
+    gen_server:call({global, potato_monitor}, get_status_info),
+
+    potato_cluster:stop_web_cluster(RefData),
+    ok.
+

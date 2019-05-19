@@ -19,7 +19,8 @@
 	 new/0,
 	 add_transaction/2,
 	 get_pending_players/1,
-	 get_pending_transactions/2
+	 get_pending_transactions/2,
+	 get_status_info/1
 	]).
 
 -include_lib("stdlib/include/assert.hrl").
@@ -176,3 +177,11 @@ collect_transactions_from_player(TxMap, Nonce, TransactionListAcc) ->
 	    %% done
 	    TransactionListAcc
     end.
+
+get_status_info(_PendingTx = #pending_tx{player_map = PlMap}) ->
+
+    LenList = lists:map(fun (L) -> length(L) end, maps:values(PlMap)),
+
+    [
+     {"pending transactions", lists:sum(LenList)}
+    ].

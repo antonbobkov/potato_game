@@ -2,7 +2,7 @@
     // Essential parameters:
     // those have to be the same for all verifiers
     "genesis_block_timestamp_sec" : "now",
-    "time_between_blocks_sec" : 5,
+    "time_between_blocks_sec" : 1,
     "chain_id" : "docker_chain",
 
     // Nonessential parameters,
@@ -16,20 +16,20 @@
     // (essential, except for private key info)
     "verifiers" : [
 	{
-	    "public_key" : "../key1.pub",
-	    "private_key" : "../key1.prv",
+	    "public_key"  : "./key1.pub",
+	    "private_key" : "./key1.prv",
 	    "ip" : "localhost",
-	    "port" : 4000,
+	    "port" : 4800,
 	},
     ],
 
-    "log_file" : "./www/potato_event.log",
-    "block_log_file" : "./www/blocks.log",
-    "directory_to_track" : "./www",
+    "log_file" : "./test/www_test/potato_event.log",
+    "block_log_file" : "./test/www_test/blocks.log",
+    "directory_to_track" : "./test/www_test/",
     
     "web" : {
-	"port" : 8081,
-	"logs_dir" : "./www/web_logs/",
-	"file_dir" : "./www"
+	"port" : 4081,
+	"logs_dir" : "./test/www_test/",
+	"file_dir" : "./test/www_test/"
     }
 }
